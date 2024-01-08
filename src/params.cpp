@@ -9,8 +9,8 @@ namespace
     void set_arguments_of_model_params(boost::program_options::options_description_easy_init &a)
     {
         a("help", "produce help message for model parameters");
-        a("source_path", po::value<std::string>());
-        a("model_path", po::value<std::string>());
+        a("source_path", po::value<std::string>()->default_value(""));
+        a("model_path", po::value<std::string>()->default_value(""));
         a("images", po::value<std::string>()->default_value("images"));
         a("resolution", po::value<int>()->default_value(-1));
         a("white_background", po::bool_switch()->default_value(false), "Activate white background");

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <boost/format.hpp>
 #include "util.h"
+#include <torch/csrc/autograd/anomaly_mode.h>
 
 int main(int argc, const char *argv[])
 {
@@ -11,6 +12,8 @@ int main(int argc, const char *argv[])
     {
         return 1;
     }
+
+    // get various parameters
     auto [model_params,
           optimization_params,
           pipeline_params,
@@ -25,6 +28,12 @@ int main(int argc, const char *argv[])
     // initialize system state
     initialize_random_seed();
     auto printer = Printer{other_params.quiet_};
+
+    // function to detect areas where backpropagation fails.
+    torch::autograd::AnomalyMode::set_enabled(other_params.detect_anomaly_);
+
+    // train
+    train(model_params, optimization_params, pipeline_params, other_params, printer);
 
     // all done
     printer.print("Training complete.");

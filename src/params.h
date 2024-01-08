@@ -4,22 +4,22 @@
 #include <iostream>
 
 template <typename T>
-inline void print_param(const std::string &param_name, const T &param_value)
+inline void print_param(const std::string &param_name, const T &param_value, std::ostream &out)
 {
-    std::cout << std::boolalpha;
-    std::cout << " " << param_name << ": " << param_value << std::endl;
+    out << std::boolalpha;
+    out << " " << param_name << ": " << param_value << std::endl;
 }
 
 template <>
-inline void print_param<std::vector<int>>(const std::string &param_name, const std::vector<int> &param_value)
+inline void print_param<std::vector<int>>(const std::string &param_name, const std::vector<int> &param_value, std::ostream &out)
 {
-    std::cout << std::boolalpha;
-    std::cout << " " << param_name << ": ";
+    out << std::boolalpha;
+    out << " " << param_name << ": ";
     for (auto &v : param_value)
     {
-        std::cout << v << " ";
+        out << v << " ";
     }
-    std::cout << std::endl;
+    out << std::endl;
 }
 
 struct ModelParams
@@ -33,17 +33,17 @@ struct ModelParams
     std::string data_device_{"cuda"};
     bool eval_{false};
 
-    void print_params() const
+    void print_params(std::ostream &out = std::cout) const
     {
-        std::cout << "> Model parameters:" << std::endl;
-        print_param("sh_degree", sh_degree_);
-        print_param("source_path", source_path_);
-        print_param("model_path", model_path_);
-        print_param("images", images_);
-        print_param("resolution", resolution_);
-        print_param("white_background", white_background_);
-        print_param("data_device", data_device_);
-        print_param("eval", eval_);
+        out << "> Model parameters:" << std::endl;
+        print_param("sh_degree", sh_degree_, out);
+        print_param("source_path", source_path_, out);
+        print_param("model_path", model_path_, out);
+        print_param("images", images_, out);
+        print_param("resolution", resolution_, out);
+        print_param("white_background", white_background_, out);
+        print_param("data_device", data_device_, out);
+        print_param("eval", eval_, out);
     }
 };
 
@@ -67,26 +67,26 @@ struct OptimizationParams
     float densify_grad_threshold_{0.0002};
     bool random_background_{false};
 
-    void print_params() const
+    void print_params(std::ostream &out = std::cout) const
     {
-        std::cout << "> Optimization parameters:" << std::endl;
-        print_param("iterations", iterations_);
-        print_param("position_lr_init", position_lr_init_);
-        print_param("position_lr_final", position_lr_final_);
-        print_param("position_lr_delay_mult", position_lr_delay_mult_);
-        print_param("position_lr_max_steps", position_lr_max_steps_);
-        print_param("feature_lr", feature_lr_);
-        print_param("opacity_lr", opacity_lr_);
-        print_param("scaling_lr", scaling_lr_);
-        print_param("rotation_lr", rotation_lr_);
-        print_param("percent_dense", percent_dense_);
-        print_param("lambda_dssim", lambda_dssim_);
-        print_param("densification_interval", densification_interval_);
-        print_param("opacity_reset_interval", opacity_reset_interval_);
-        print_param("densify_from_iter", densify_from_iter_);
-        print_param("densify_until_iter", densify_until_iter_);
-        print_param("densify_grad_threshold", densify_grad_threshold_);
-        print_param("random_background", random_background_);
+        out << "> Optimization parameters:" << std::endl;
+        print_param("iterations", iterations_, out);
+        print_param("position_lr_init", position_lr_init_, out);
+        print_param("position_lr_final", position_lr_final_, out);
+        print_param("position_lr_delay_mult", position_lr_delay_mult_, out);
+        print_param("position_lr_max_steps", position_lr_max_steps_, out);
+        print_param("feature_lr", feature_lr_, out);
+        print_param("opacity_lr", opacity_lr_, out);
+        print_param("scaling_lr", scaling_lr_, out);
+        print_param("rotation_lr", rotation_lr_, out);
+        print_param("percent_dense", percent_dense_, out);
+        print_param("lambda_dssim", lambda_dssim_, out);
+        print_param("densification_interval", densification_interval_, out);
+        print_param("opacity_reset_interval", opacity_reset_interval_, out);
+        print_param("densify_from_iter", densify_from_iter_, out);
+        print_param("densify_until_iter", densify_until_iter_, out);
+        print_param("densify_grad_threshold", densify_grad_threshold_, out);
+        print_param("random_background", random_background_, out);
     }
 };
 
@@ -96,12 +96,12 @@ struct PipelineParams
     bool compute_cov3D_python_{false};
     bool debug_{false};
 
-    void print_params() const
+    void print_params(std::ostream &out = std::cout) const
     {
-        std::cout << "> Pipeline parameters:" << std::endl;
-        print_param("convert_SHs_python", convert_SHs_python_);
-        print_param("compute_cov3D_python", compute_cov3D_python_);
-        print_param("debug", debug_);
+        out << "> Pipeline parameters:" << std::endl;
+        print_param("convert_SHs_python", convert_SHs_python_, out);
+        print_param("compute_cov3D_python", compute_cov3D_python_, out);
+        print_param("debug", debug_, out);
     }
 };
 
@@ -117,18 +117,18 @@ struct OtherParams
     std::vector<int> checkpoint_iterations_{};
     std::string start_checkpoint_{};
 
-    void print_params() const
+    void print_params(std::ostream &out = std::cout) const
     {
-        std::cout << "> Other parameters:" << std::endl;
-        print_param("ip", ip_);
-        print_param("port", port_);
-        print_param("debug_from", debug_from_);
-        print_param("detect_anomaly", detect_anomaly_);
-        print_param("save_iterations", save_iterations_);
-        print_param("test_iterations", test_iterations_);
-        print_param("quiet", quiet_);
-        print_param("checkpoint_iterations", checkpoint_iterations_);
-        print_param("start_checkpoint", start_checkpoint_);
+        out << "> Other parameters:" << std::endl;
+        print_param("ip", ip_, out);
+        print_param("port", port_, out);
+        print_param("debug_from", debug_from_, out);
+        print_param("detect_anomaly", detect_anomaly_, out);
+        print_param("save_iterations", save_iterations_, out);
+        print_param("test_iterations", test_iterations_, out);
+        print_param("quiet", quiet_, out);
+        print_param("checkpoint_iterations", checkpoint_iterations_, out);
+        print_param("start_checkpoint", start_checkpoint_, out);
     }
 };
 
