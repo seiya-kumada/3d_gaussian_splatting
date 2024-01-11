@@ -20,4 +20,7 @@ private:
 
 public:
     GaussianModel(int sh_degree);
+
+private:
+    void setup_functions();
 };

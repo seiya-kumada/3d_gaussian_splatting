@@ -4,3 +4,7 @@ GaussianModel::GaussianModel(int sh_degree)
     : max_sh_degree_{sh_degree}
 {
 }
+
+void GaussianModel::setup_functions()
+{
+}
