@@ -1,11 +1,11 @@
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "util.h"
+#include "src/utils/train_utils/util.h"
 #include <boost/format.hpp>
-#include "params.h"
+#include "src/arguments/params.h"
 #include <filesystem>
 #include <fstream>
-#include "gaussian_model.h"
+#include "src/scene/gaussian_model.h"
 namespace fs = std::filesystem;
 
 Printer::Printer(bool quiet)

@@ -18,9 +18,20 @@ private:
     float percent_dense_{0};
     float spatial_lr_scale_{0};
 
+    typedef at::Tensor (*Activation_0)(const at::Tensor &);
+    Activation_0 scaling_activation_;
+    Activation_0 scaling_inverse_activation_;
+    Activation_0 covariance_activation_;
+    Activation_0 opacity_activation_;
+    Activation_0 inverse_opacity_activation_;
+
+    typedef at::Tensor (*Activation_1)(const at::Tensor &, torch::nn::functional::NormalizeFuncOptions);
+    Activation_1 rotation_activation_;
+
 public:
     GaussianModel(int sh_degree);
 
 private:
     void setup_functions();
+    auto get_scaling() -> torch::Tensor;
 };

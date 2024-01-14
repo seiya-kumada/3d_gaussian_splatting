@@ -1,7 +1,7 @@
-#include "params.h"
+#include "arguments/params.h"
 #include <iostream>
 #include <boost/format.hpp>
-#include "util.h"
+#include "utils/train_utils/util.h"
 #include <torch/csrc/autograd/anomaly_mode.h>
 
 int main(int argc, const char *argv[])
