@@ -1,6 +1,6 @@
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "src/utils/train_utils/util.h"
+#include "src/utils/train_utils.h"
 #include <boost/format.hpp>
 #include "src/arguments/params.h"
 #include <filesystem>

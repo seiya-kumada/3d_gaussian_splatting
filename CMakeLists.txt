@@ -9,7 +9,7 @@ find_package(Boost 1.71.0 REQUIRED COMPONENTS program_options date_time)
 
 
 # Create Executable File
-add_executable(${PROJECT_NAME} src/train.cpp src/arguments/params.cpp src/utils/train_utils/util.cpp src/arguments/params.h src/utils/train_utils/util.h 
+add_executable(${PROJECT_NAME} src/train.cpp src/arguments/params.cpp src/utils/train_utils.cpp src/arguments/params.h src/utils/train_utils.h 
     src/scene/gaussian_model.h src/scene/gaussian_model.cpp)
 
 include_directories(
