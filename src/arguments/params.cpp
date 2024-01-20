@@ -339,3 +339,12 @@ auto parse_parameters(int argc, const char *argv[])
         model_params, optimization_params, pipleline_params, other_params);
     return r;
 }
+
+#ifdef UNIT_TEST
+#include <boost/test/unit_test.hpp>
+
+BOOST_AUTO_TEST_CASE(test_params)
+{
+    BOOST_CHECK_EQUAL(1, 1);
+}
+#endif // UNIT_TEST

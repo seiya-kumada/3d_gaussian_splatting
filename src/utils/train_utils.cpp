@@ -94,3 +94,12 @@ void train(
     prepare_output_and_logger(model_params, printer);
     auto gaussian_model = GaussianModel{model_params.sh_degree_};
 }
+
+#ifdef UNIT_TEST
+#include <boost/test/unit_test.hpp>
+
+BOOST_AUTO_TEST_CASE(test_train_utils)
+{
+    BOOST_CHECK_EQUAL(1, 1);
+}
+#endif // UNIT_TEST

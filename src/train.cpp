@@ -1,3 +1,8 @@
+#ifdef UNIT_TEST
+#define BOOST_TEST_MODULE MyTest
+#include <boost/test/unit_test.hpp>
+#else // UNIT_TEST
+
 #include "arguments/params.h"
 #include <iostream>
 #include <boost/format.hpp>
@@ -39,3 +44,4 @@ int main(int argc, const char *argv[])
     printer.print("Training complete.");
     return 0;
 }
+#endif // UNIT_TEST

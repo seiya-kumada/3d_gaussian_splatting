@@ -61,3 +61,12 @@ auto build_scaling_rotation(const torch::Tensor &s, const torch::Tensor &r) -> t
     L = torch::matmul(R, L);
     return L;
 }
+
+#ifdef UNIT_TEST
+#include <boost/test/unit_test.hpp>
+
+BOOST_AUTO_TEST_CASE(test_general_utils)
+{
+    BOOST_CHECK_EQUAL(1, 1);
+}
+#endif // UNIT_TEST

@@ -14,11 +14,11 @@ add_executable(${PROJECT_NAME} src/train.cpp src/arguments/params.cpp src/utils/
     src/scene/gaussian_model.h src/scene/gaussian_model.cpp
     src/utils/general_utils.h src/utils/general_utils.cpp)
 
-option(ENABLE_TESTS "Enable unit tests" OFF)
-if(ENABLE_TESTS)
+option(ENABLE_UNIT_TESTS "Enable unit testing" OFF)
+if(ENABLE_UNIT_TESTS)
+    add_definitions(-DUNIT_TEST)
     find_package(Boost 1.71.0 REQUIRED COMPONENTS unit_test_framework)
-    add_executable(unittest_app src/scene/gaussian_model_unittest.cpp)
-    target_link_libraries(unittest_app Boost::unit_test_framework)
+    target_link_libraries(train Boost::unit_test_framework)
 endif()
 
 include_directories(
