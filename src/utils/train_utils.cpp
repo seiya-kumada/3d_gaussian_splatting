@@ -33,7 +33,16 @@ void initialize_random_seed()
 {
     // initialize random seed
     srand(time(NULL));
-    // TODO: set up CUDA device
+
+    // 乱数生成器のシードを設定
+    torch::manual_seed(0); // CPUのシードを設定
+
+    if (torch::cuda::is_available())
+    {
+        // CUDAが利用可能な場合、CUDAのシードも設定
+        torch::cuda::manual_seed(0);
+        torch::cuda::manual_seed_all(0); // 複数のCUDAデバイスがある場合には、すべてのデバイスに対してシードを設定
+    }
 }
 
 namespace
