@@ -1,11 +1,6 @@
 #include "gaussian_model.h"
 #include "src/utils/general_utils.h"
-
-GaussianModel::GaussianModel(int sh_degree)
-    : max_sh_degree_{sh_degree}
-{
-    setup_functions();
-}
+#include "src/arguments/params.h"
 
 namespace
 {
@@ -31,20 +26,82 @@ namespace
     }
 }
 
-void GaussianModel::setup_functions()
+GaussianModel::GaussianModel(int sh_degree)
+    : max_sh_degree_{sh_degree},
+      percent_dense_{0},
+      core_params_{
+          0,               // active_sh_degree_,
+          torch::empty(0), // xyz_
+          torch::empty(0), // features_dc_
+          torch::empty(0), // features_rest_
+          torch::empty(0), // scaling_
+          torch::empty(0), // rotation_
+          torch::empty(0), // opacity_
+          torch::empty(0), // max_radii2D_
+          torch::empty(0), // xyz_gradient_accum_
+          torch::empty(0), // denom_
+          nullptr,         // optimizer_
+          0,               // spatial_lr_scale_
+      },
+      scaling_activation_{&torch::exp},
+      scaling_inverse_activation_{&torch::log},
+      opacity_activation_{&torch::sigmoid},
+      inverse_opacity_activation_{&torch::special::logit},
+      rotation_activation_{&torch::nn::functional::normalize},
+      covariance_activation_{build_covariance_from_scaling_rotation}
 {
-    scaling_activation_ = &torch::exp;
-    scaling_inverse_activation_ = &torch::log;
-    covariance_activation_ = build_covariance_from_scaling_rotation;
-    opacity_activation_ = &torch::sigmoid;
-    inverse_opacity_activation_ = &torch::special::logit;
-    rotation_activation_ = &torch::nn::functional::normalize;
 }
-// self.covariance_activation(self.get_scaling, scaling_modifier, self._rotation)
+
+void GaussianModel::CoreParams::capture(const std::string &tensors_path, const std::string &opt_path)
+{
+    std::vector<torch::Tensor> tensors = {
+        torch::tensor(active_sh_degree_),
+        xyz_,
+        features_dc_,
+        features_rest_,
+        scaling_,
+        rotation_,
+        opacity_,
+        max_radii2D_,
+        xyz_gradient_accum_,
+        denom_,
+        torch::tensor(spatial_lr_scale_),
+    };
+    torch::save(tensors, tensors_path);
+    torch::save(*optimizer_, opt_path);
+}
+
+void GaussianModel::CoreParams::restore(const std::string &tensors_path, const std::string &opt_path)
+{
+    std::vector<torch::Tensor> tensors;
+    torch::load(tensors, tensors_path);
+    active_sh_degree_ = tensors[0].item<int>();
+    xyz_ = tensors[1];
+    features_dc_ = tensors[2];
+    features_rest_ = tensors[3];
+    scaling_ = tensors[4];
+    rotation_ = tensors[5];
+    opacity_ = tensors[6];
+    max_radii2D_ = tensors[7];
+    xyz_gradient_accum_ = tensors[8];
+    denom_ = tensors[9];
+    spatial_lr_scale_ = tensors[10].item<float>();
+    torch::load(*optimizer_, opt_path);
+}
+
+void GaussianModel::capture(const std::string &tensors_path, const std::string &opt_path)
+{
+    core_params_.capture(tensors_path, opt_path);
+}
+
+void GaussianModel::restore(const std::string &tensors_path, const std::string &opt_path)
+{
+    core_params_.restore(tensors_path, opt_path);
+}
 
 auto GaussianModel::get_scaling() -> torch::Tensor
 {
-    return scaling_activation_(scaling_);
+    return scaling_activation_(core_params_.scaling_);
 }
 
 #ifdef UNIT_TEST

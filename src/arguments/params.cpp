@@ -345,6 +345,7 @@ auto parse_parameters(int argc, const char *argv[])
 
 BOOST_AUTO_TEST_CASE(test_params)
 {
+    // 後回し
     BOOST_CHECK_EQUAL(1, 1);
 }
 #endif // UNIT_TEST
