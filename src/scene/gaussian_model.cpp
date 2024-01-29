@@ -1,6 +1,8 @@
 #include "gaussian_model.h"
 #include "src/utils/general_utils.h"
 #include "src/arguments/params.h"
+#include <filesystem>
+namespace fs = std::filesystem;
 
 namespace
 {
@@ -54,6 +56,7 @@ GaussianModel::GaussianModel(int sh_degree)
 
 void GaussianModel::CoreParams::capture(const std::string &tensors_path, const std::string &opt_path)
 {
+
     std::vector<torch::Tensor> tensors = {
         torch::tensor(active_sh_degree_),
         xyz_,
@@ -68,25 +71,48 @@ void GaussianModel::CoreParams::capture(const std::string &tensors_path, const s
         torch::tensor(spatial_lr_scale_),
     };
     torch::save(tensors, tensors_path);
-    torch::save(*optimizer_, opt_path);
+    if (optimizer_ != nullptr)
+    {
+        torch::save(*optimizer_, opt_path);
+    }
 }
 
 void GaussianModel::CoreParams::restore(const std::string &tensors_path, const std::string &opt_path)
 {
-    std::vector<torch::Tensor> tensors;
-    torch::load(tensors, tensors_path);
-    active_sh_degree_ = tensors[0].item<int>();
-    xyz_ = tensors[1];
-    features_dc_ = tensors[2];
-    features_rest_ = tensors[3];
-    scaling_ = tensors[4];
-    rotation_ = tensors[5];
-    opacity_ = tensors[6];
-    max_radii2D_ = tensors[7];
-    xyz_gradient_accum_ = tensors[8];
-    denom_ = tensors[9];
-    spatial_lr_scale_ = tensors[10].item<float>();
-    torch::load(*optimizer_, opt_path);
+    if (fs::exists(tensors_path))
+    {
+        std::vector<torch::Tensor> tensors;
+        torch::load(tensors, tensors_path);
+        active_sh_degree_ = tensors[0].item<int>();
+        xyz_ = tensors[1];
+        features_dc_ = tensors[2];
+        features_rest_ = tensors[3];
+        scaling_ = tensors[4];
+        rotation_ = tensors[5];
+        opacity_ = tensors[6];
+        max_radii2D_ = tensors[7];
+        xyz_gradient_accum_ = tensors[8];
+        denom_ = tensors[9];
+        spatial_lr_scale_ = tensors[10].item<float>();
+    }
+    if (fs::exists(opt_path))
+    {
+        // l = [
+        //{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+        //{'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
+        //{'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
+        //{'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+        //{'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+        //{'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
+        //]
+        // self.optimizer = torch.optim.Adam(l, lr = 0.0, eps = 1e-15)
+        torch::load(*optimizer_, opt_path);
+    }
+}
+
+auto GaussianModel::get_core_params() -> const GaussianModel::CoreParams &
+{
+    return core_params_;
 }
 
 void GaussianModel::capture(const std::string &tensors_path, const std::string &opt_path)
@@ -153,11 +179,22 @@ namespace
         BOOST_CHECK_EQUAL(cov.index({1, 4}).item<float>(), 0);
         BOOST_CHECK_EQUAL(cov.index({1, 5}).item<float>(), 0.0625);
     }
+
+    void test_capture_and_restore()
+    {
+        std::cout << " test_capture_and_restore" << std::endl;
+        GaussianModel model(2);
+        model.capture("test_gaussian_model.pt", "test_gaussian_model_opt.pt");
+        // model.restore("test_gaussian_model.pt", "test_gaussian_model_opt.pt");
+        const auto &core_params = model.get_core_params();
+        BOOST_CHECK_EQUAL(core_params.active_sh_degree_, 0);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_gaussian_model)
 {
     std::cout << "test_gaussian_model" << std::endl;
     test_build_covariance_from_scaling_rotation();
+    test_capture_and_restore();
 }
 #endif // UNIT_TEST
