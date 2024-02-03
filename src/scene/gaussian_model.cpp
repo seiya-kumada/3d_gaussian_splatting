@@ -54,6 +54,7 @@ GaussianModel::GaussianModel(int sh_degree)
 {
 }
 
+// test passed
 void GaussianModel::CoreParams::capture(const std::string &tensors_path, const std::string &opt_path)
 {
 
@@ -77,6 +78,7 @@ void GaussianModel::CoreParams::capture(const std::string &tensors_path, const s
     }
 }
 
+// test passed
 void GaussianModel::CoreParams::restore(const std::string &tensors_path, const std::string &opt_path)
 {
     if (fs::exists(tensors_path))
@@ -110,24 +112,63 @@ void GaussianModel::CoreParams::restore(const std::string &tensors_path, const s
     }
 }
 
-auto GaussianModel::get_core_params() -> const GaussianModel::CoreParams &
+auto GaussianModel::get_core_params() -> GaussianModel::CoreParams &
 {
     return core_params_;
 }
 
+auto GaussianModel::get_core_params() const -> const GaussianModel::CoreParams &
+{
+    return core_params_;
+}
+
+// test passed
 void GaussianModel::capture(const std::string &tensors_path, const std::string &opt_path)
 {
     core_params_.capture(tensors_path, opt_path);
 }
 
+// test passed
 void GaussianModel::restore(const std::string &tensors_path, const std::string &opt_path)
 {
     core_params_.restore(tensors_path, opt_path);
 }
 
-auto GaussianModel::get_scaling() -> torch::Tensor
+// test passed
+auto GaussianModel::get_scaling() const -> torch::Tensor
 {
     return scaling_activation_(core_params_.scaling_);
+}
+
+// test passed
+auto GaussianModel::get_rotation() const -> torch::Tensor
+{
+    namespace F = torch::nn::functional;
+    return rotation_activation_(core_params_.rotation_, F::NormalizeFuncOptions().dim(1).p(2));
+}
+
+// test passed
+auto GaussianModel::get_xyz() const -> const torch::Tensor &
+{
+    return core_params_.xyz_;
+}
+
+// test passed
+auto GaussianModel::get_features() const -> torch::Tensor
+{
+    return torch::cat({core_params_.features_dc_, core_params_.features_rest_}, 1);
+}
+
+// test passed
+auto GaussianModel::get_opacity() const -> torch::Tensor
+{
+    return opacity_activation_(core_params_.opacity_);
+}
+
+// test passed
+auto GaussianModel::get_covariance(int scaling_modifier) const -> torch::Tensor
+{
+    return covariance_activation_(get_scaling(), scaling_modifier, core_params_.rotation_);
 }
 
 #ifdef UNIT_TEST
@@ -185,10 +226,90 @@ namespace
         std::cout << " test_capture_and_restore" << std::endl;
         GaussianModel model(2);
         model.capture("test_gaussian_model.pt", "test_gaussian_model_opt.pt");
-        // model.restore("test_gaussian_model.pt", "test_gaussian_model_opt.pt");
+        model.restore("test_gaussian_model.pt", "test_gaussian_model_opt.pt");
         const auto &core_params = model.get_core_params();
         BOOST_CHECK_EQUAL(core_params.active_sh_degree_, 0);
+        auto answer = torch::empty(0);
+        BOOST_CHECK(torch::allclose(answer, core_params.xyz_));
+        BOOST_CHECK(torch::allclose(answer, core_params.features_dc_));
+        BOOST_CHECK(torch::allclose(answer, core_params.scaling_));
+        BOOST_CHECK(torch::allclose(answer, core_params.rotation_));
+        BOOST_CHECK(torch::allclose(answer, core_params.opacity_));
+        BOOST_CHECK(torch::allclose(answer, core_params.max_radii2D_));
+        BOOST_CHECK(torch::allclose(answer, core_params.xyz_gradient_accum_));
+        BOOST_CHECK(torch::allclose(answer, core_params.denom_));
+        BOOST_CHECK(core_params.optimizer_ == nullptr);
+        BOOST_CHECK_EQUAL(core_params.spatial_lr_scale_, 0);
     }
+
+    void test_get_scaling()
+    {
+        std::cout << " test_get_scaling" << std::endl;
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.scaling_ = torch::zeros({2, 3});
+        auto scaling = model.get_scaling();
+        auto answer = torch::ones({2, 3});
+        BOOST_CHECK(torch::allclose(answer, scaling));
+    }
+
+    void test_get_rotation()
+    {
+        std::cout << " test_get_rotation" << std::endl;
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.rotation_ = torch::ones({2, 4});
+        auto rotation = model.get_rotation();
+        auto answer = 0.5 * torch::ones({2, 4});
+        BOOST_CHECK(torch::allclose(answer, rotation));
+    }
+
+    void test_get_xyz()
+    {
+        std::cout << " test_get_xyz" << std::endl;
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.xyz_ = torch::ones({2, 4});
+        auto xyz = model.get_xyz();
+        auto answer = torch::ones({2, 4});
+        BOOST_CHECK(torch::allclose(answer, xyz));
+    }
+
+    void test_get_features()
+    {
+        std::cout << " test_get_features" << std::endl;
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.features_dc_ = torch::ones({2, 4});
+        core_params.features_rest_ = torch::zeros({2, 4});
+        auto features = model.get_features();
+        auto answer = torch::cat({torch::ones({2, 4}), torch::zeros({2, 4})}, 1);
+        BOOST_CHECK(torch::allclose(answer, features));
+    }
+
+    void test_get_opacity()
+    {
+        std::cout << " test_get_opacity" << std::endl;
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.opacity_ = torch::zeros({2, 4});
+        auto opacity = model.get_opacity();
+        auto answer = 0.5 * torch::ones({2, 4});
+        BOOST_CHECK(torch::allclose(answer, opacity));
+    }
+
+    void test_get_covariance()
+    {
+        std::cout << " test_get_covarinance" << std::endl;
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.scaling_ = torch::zeros({2, 3}); // 1.0
+        core_params.rotation_ = torch::ones({2, 4});
+        auto covariance = model.get_covariance().to(torch::kCPU);
+        auto answer = torch::tensor({{1.0, 0.0, 0.0, 1.0, 0.0, 1.0}, {1.0, 0.0, 0.0, 1.0, 0.0, 1.0}});
+        BOOST_CHECK(torch::allclose(answer, covariance));
+    }
+
 }
 
 BOOST_AUTO_TEST_CASE(test_gaussian_model)
@@ -196,5 +317,11 @@ BOOST_AUTO_TEST_CASE(test_gaussian_model)
     std::cout << "test_gaussian_model" << std::endl;
     test_build_covariance_from_scaling_rotation();
     test_capture_and_restore();
+    test_get_scaling();
+    test_get_rotation();
+    test_get_xyz();
+    test_get_features();
+    test_get_opacity();
+    test_get_covariance();
 }
 #endif // UNIT_TEST

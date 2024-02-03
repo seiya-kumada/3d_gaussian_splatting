@@ -46,10 +46,17 @@ private:
 
 public:
     GaussianModel(int sh_degree);
+
     void capture(const std::string &tensors_path, const std::string &opt_path);
     void restore(const std::string &tensors_path, const std::string &opt_path);
-    auto get_core_params() -> const CoreParams &;
 
-private:
-    auto get_scaling() -> torch::Tensor;
+    auto get_core_params() -> CoreParams &;
+    auto get_core_params() const -> const CoreParams &;
+
+    auto get_scaling() const -> torch::Tensor;
+    auto get_rotation() const -> torch::Tensor;
+    auto get_xyz() const -> const torch::Tensor &;
+    auto get_features() const -> torch::Tensor;
+    auto get_opacity() const -> torch::Tensor;
+    auto get_covariance(int scaling_modifier = 1) const -> torch::Tensor;
 };
