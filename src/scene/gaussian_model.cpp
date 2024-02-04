@@ -171,6 +171,15 @@ auto GaussianModel::get_covariance(int scaling_modifier) const -> torch::Tensor
     return covariance_activation_(get_scaling(), scaling_modifier, core_params_.rotation_);
 }
 
+// test passed
+auto GaussianModel::oneup_SH_degree() -> void
+{
+    if (core_params_.active_sh_degree_ < max_sh_degree_)
+    {
+        core_params_.active_sh_degree_++;
+    }
+}
+
 #ifdef UNIT_TEST
 #include <boost/test/unit_test.hpp>
 namespace
@@ -310,6 +319,16 @@ namespace
         BOOST_CHECK(torch::allclose(answer, covariance));
     }
 
+    void test_oneup_SH_degree()
+    {
+        std::cout << " test_oneup_SH_degree" << std::endl;
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.active_sh_degree_ = 0;
+        model.oneup_SH_degree();
+        BOOST_CHECK_EQUAL(core_params.active_sh_degree_, 1);
+    }
+
 }
 
 BOOST_AUTO_TEST_CASE(test_gaussian_model)
@@ -323,5 +342,6 @@ BOOST_AUTO_TEST_CASE(test_gaussian_model)
     test_get_features();
     test_get_opacity();
     test_get_covariance();
+    test_oneup_SH_degree();
 }
 #endif // UNIT_TEST

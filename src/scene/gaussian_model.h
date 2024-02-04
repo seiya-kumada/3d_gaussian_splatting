@@ -59,4 +59,6 @@ public:
     auto get_features() const -> torch::Tensor;
     auto get_opacity() const -> torch::Tensor;
     auto get_covariance(int scaling_modifier = 1) const -> torch::Tensor;
+
+    auto oneup_SH_degree() -> void;
 };

@@ -23,11 +23,12 @@ int main(int argc, const char *argv[])
           optimization_params,
           pipeline_params,
           other_params] = is_good.value();
-    // model_params.print_params();
-    // optimization_params.print_params();
-    // pipeline_params.print_params();
-    // other_params.print_params();
+    model_params.print_params();
+    optimization_params.print_params();
+    pipeline_params.print_params();
+    other_params.print_params();
     other_params.save_iterations_.emplace_back(optimization_params.iterations_);
+
     std::cout << boost::format("Optimizing %1%\n") % model_params.model_path_;
 
     // initialize system state

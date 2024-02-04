@@ -36,14 +36,14 @@ struct ModelParams
     void print_params(std::ostream &out = std::cout) const
     {
         out << "> Model parameters:" << std::endl;
-        print_param("sh_degree", sh_degree_, out);
-        print_param("source_path", source_path_, out);
-        print_param("model_path", model_path_, out);
-        print_param("images", images_, out);
-        print_param("resolution", resolution_, out);
-        print_param("white_background", white_background_, out);
-        print_param("data_device", data_device_, out);
-        print_param("eval", eval_, out);
+        print_param(" sh_degree", sh_degree_, out);
+        print_param(" source_path", source_path_, out);
+        print_param(" model_path", model_path_, out);
+        print_param(" images", images_, out);
+        print_param(" resolution", resolution_, out);
+        print_param(" white_background", white_background_, out);
+        print_param(" data_device", data_device_, out);
+        print_param(" eval", eval_, out);
     }
 };
 
@@ -70,23 +70,23 @@ struct OptimizationParams
     void print_params(std::ostream &out = std::cout) const
     {
         out << "> Optimization parameters:" << std::endl;
-        print_param("iterations", iterations_, out);
-        print_param("position_lr_init", position_lr_init_, out);
-        print_param("position_lr_final", position_lr_final_, out);
-        print_param("position_lr_delay_mult", position_lr_delay_mult_, out);
-        print_param("position_lr_max_steps", position_lr_max_steps_, out);
-        print_param("feature_lr", feature_lr_, out);
-        print_param("opacity_lr", opacity_lr_, out);
-        print_param("scaling_lr", scaling_lr_, out);
-        print_param("rotation_lr", rotation_lr_, out);
-        print_param("percent_dense", percent_dense_, out);
-        print_param("lambda_dssim", lambda_dssim_, out);
-        print_param("densification_interval", densification_interval_, out);
-        print_param("opacity_reset_interval", opacity_reset_interval_, out);
-        print_param("densify_from_iter", densify_from_iter_, out);
-        print_param("densify_until_iter", densify_until_iter_, out);
-        print_param("densify_grad_threshold", densify_grad_threshold_, out);
-        print_param("random_background", random_background_, out);
+        print_param(" iterations", iterations_, out);
+        print_param(" position_lr_init", position_lr_init_, out);
+        print_param(" position_lr_final", position_lr_final_, out);
+        print_param(" position_lr_delay_mult", position_lr_delay_mult_, out);
+        print_param(" position_lr_max_steps", position_lr_max_steps_, out);
+        print_param(" feature_lr", feature_lr_, out);
+        print_param(" opacity_lr", opacity_lr_, out);
+        print_param(" scaling_lr", scaling_lr_, out);
+        print_param(" rotation_lr", rotation_lr_, out);
+        print_param(" percent_dense", percent_dense_, out);
+        print_param(" lambda_dssim", lambda_dssim_, out);
+        print_param(" densification_interval", densification_interval_, out);
+        print_param(" opacity_reset_interval", opacity_reset_interval_, out);
+        print_param(" densify_from_iter", densify_from_iter_, out);
+        print_param(" densify_until_iter", densify_until_iter_, out);
+        print_param(" densify_grad_threshold", densify_grad_threshold_, out);
+        print_param(" random_background", random_background_, out);
     }
 };
 
@@ -99,9 +99,9 @@ struct PipelineParams
     void print_params(std::ostream &out = std::cout) const
     {
         out << "> Pipeline parameters:" << std::endl;
-        print_param("convert_SHs_python", convert_SHs_python_, out);
-        print_param("compute_cov3D_python", compute_cov3D_python_, out);
-        print_param("debug", debug_, out);
+        print_param(" convert_SHs_python", convert_SHs_python_, out);
+        print_param(" compute_cov3D_python", compute_cov3D_python_, out);
+        print_param(" debug", debug_, out);
     }
 };
 
@@ -120,15 +120,15 @@ struct OtherParams
     void print_params(std::ostream &out = std::cout) const
     {
         out << "> Other parameters:" << std::endl;
-        print_param("ip", ip_, out);
-        print_param("port", port_, out);
-        print_param("debug_from", debug_from_, out);
-        print_param("detect_anomaly", detect_anomaly_, out);
-        print_param("save_iterations", save_iterations_, out);
-        print_param("test_iterations", test_iterations_, out);
-        print_param("quiet", quiet_, out);
-        print_param("checkpoint_iterations", checkpoint_iterations_, out);
-        print_param("start_checkpoint", start_checkpoint_, out);
+        print_param(" ip", ip_, out);
+        print_param(" port", port_, out);
+        print_param(" debug_from", debug_from_, out);
+        print_param(" detect_anomaly", detect_anomaly_, out);
+        print_param(" save_iterations", save_iterations_, out);
+        print_param(" test_iterations", test_iterations_, out);
+        print_param(" quiet", quiet_, out);
+        print_param(" checkpoint_iterations", checkpoint_iterations_, out);
+        print_param(" start_checkpoint", start_checkpoint_, out);
     }
 };
 

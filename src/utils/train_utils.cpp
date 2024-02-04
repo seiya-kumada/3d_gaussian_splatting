@@ -1,11 +1,13 @@
 #include <iostream>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include "src/utils/train_utils.h"
+#include "utils/train_utils.h"
 #include <boost/format.hpp>
-#include "src/arguments/params.h"
+#include "arguments/params.h"
 #include <filesystem>
 #include <fstream>
-#include "src/scene/gaussian_model.h"
+#include "scene/gaussian_model.h"
+#include "scene/scene.h"
+
 namespace fs = std::filesystem;
 
 Printer::Printer(bool quiet)
@@ -101,7 +103,8 @@ void train(
 {
     auto first_iter = int{0};
     prepare_output_and_logger(model_params, printer);
-    auto gaussian_model = GaussianModel{model_params.sh_degree_};
+    auto gaussian_model = std::make_shared<GaussianModel>(model_params.sh_degree_);
+    auto scene = Scene{model_params, gaussian_model};
 }
 
 #ifdef UNIT_TEST

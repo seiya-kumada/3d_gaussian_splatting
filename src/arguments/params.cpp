@@ -10,7 +10,7 @@ namespace
     {
         a("help", "produce help message for model parameters");
         a("source_path", po::value<std::string>()->default_value(""));
-        a("model_path", po::value<std::string>()->default_value(""));
+        a("model_path", po::value<std::string>()->default_value("./model"));
         a("images", po::value<std::string>()->default_value("images"));
         a("resolution", po::value<int>()->default_value(-1));
         a("white_background", po::bool_switch()->default_value(false), "Activate white background");
