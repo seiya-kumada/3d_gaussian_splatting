@@ -1,6 +1,8 @@
 #include <torch/torch.h>
 #include <memory>
 
+struct OptimizationParams;
+
 class GaussianModel
 {
 public:
@@ -61,4 +63,8 @@ public:
     auto get_covariance(int scaling_modifier = 1) const -> torch::Tensor;
 
     auto oneup_SH_degree() -> void;
+
+    auto setup(const OptimizationParams &params) -> void;
+
+    auto update_learning_rate(int iteration) const -> float;
 };

@@ -13,3 +13,13 @@ Scene::Scene(
       model_{model}
 {
 }
+
+auto Scene::get_train_camera(float scale) -> std::shared_ptr<Camera>
+{
+    return train_cameras_[scale];
+}
+
+auto Scene::get_test_camera(float scale) -> std::shared_ptr<Camera>
+{
+    return test_cameras_[scale];
+}

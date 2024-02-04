@@ -1,6 +1,6 @@
-#include "gaussian_model.h"
-#include "src/utils/general_utils.h"
-#include "src/arguments/params.h"
+#include "scene/gaussian_model.h"
+#include "utils/general_utils.h"
+#include "arguments/params.h"
 #include <filesystem>
 namespace fs = std::filesystem;
 
@@ -178,6 +178,47 @@ auto GaussianModel::oneup_SH_degree() -> void
     {
         core_params_.active_sh_degree_++;
     }
+}
+
+auto GaussianModel::setup(const OptimizationParams &params) -> void
+{
+    // percent_dense_ = params.percent_dense_;
+    //      self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+    //      self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+
+    //    l = [
+    //        {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
+    //        {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
+    //        {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
+    //        {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
+    //        {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
+    //        {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
+    //    ]
+
+    //    self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
+    //    self.xyz_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init*self.spatial_lr_scale,
+    //                                                lr_final=training_args.position_lr_final*self.spatial_lr_scale,
+    //                                                lr_delay_mult=training_args.position_lr_delay_mult,
+    //                                                max_steps=training_args.position_lr_max_steps)
+}
+
+auto GaussianModel::update_learning_rate(int iteration) const -> float
+{
+    for (const auto &param_group : core_params_.optimizer_->param_groups())
+    {
+        // if (param_group["name"] == "xyz")
+        //{
+        //     auto lr = 0.0; // self.xyz_scheduler_args(iteration)
+        //     param_group["lr"] = lr;
+        //     return lr;
+        // }
+    }
+    // for param_group in self.optimizer.param_groups:
+    //         if param_group["name"] == "xyz":
+    //             lr = self.xyz_scheduler_args(iteration)
+    //             param_group['lr'] = lr
+    //             return lr
+    return 0.0;
 }
 
 #ifdef UNIT_TEST

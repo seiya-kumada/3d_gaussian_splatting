@@ -105,6 +105,30 @@ void train(
     prepare_output_and_logger(model_params, printer);
     auto gaussian_model = std::make_shared<GaussianModel>(model_params.sh_degree_);
     auto scene = Scene{model_params, gaussian_model};
+    gaussian_model->setup(optimization_params);
+
+    if (!other_params.start_checkpoint_.empty())
+    {
+        // torch::load(other_params.start_checkpoint_);
+    }
+
+    auto bg_color = model_params.white_background_ ? std::vector<float>{1.0, 1.0, 1.0}
+                                                   : std::vector<float>{0.0, 0.0, 0.0};
+    auto background = torch::tensor(bg_color, torch::kFloat32).to(torch::kCUDA);
+
+    // not supported yet in C++
+    // iter_start = torch.cuda.Event(enable_timing = True)
+    // iter_end = torch.cuda.Event(enable_timing = True)
+
+    auto viewpoint_stack = nullptr;
+    auto ema_loss_for_log = float{0.0};
+
+    first_iter += 1;
+    // loop between first_iter and optimization_params.iterations_
+    for (auto iteration = first_iter; iteration <= optimization_params.iterations_; iteration++)
+    {
+        gaussian_model->update_learning_rate(iteration);
+    }
 }
 
 #ifdef UNIT_TEST
