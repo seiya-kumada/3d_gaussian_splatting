@@ -97,6 +97,37 @@ auto build_scaling_rotation(const torch::Tensor &s, const torch::Tensor &r) -> t
     return L;
 }
 
+auto get_expon_lr_func(
+    float lr_init,
+    float lr_final,
+    int lr_delay_steps,
+    float lr_delay_mult,
+    int max_steps) -> std::function<float(int)>
+{
+    return [lr_init, lr_final, lr_delay_steps, lr_delay_mult, max_steps](int step) -> float
+    {
+        if (step < 0 || (lr_init == 0.0f && lr_final == 0.0f))
+        {
+            return 0.0f;
+        }
+
+        float delay_rate;
+        if (lr_delay_steps > 0)
+        {
+            // A kind of reverse cosine decay.
+            delay_rate = lr_delay_mult +
+                         (1 - lr_delay_mult) * std::sin(0.5 * M_PI * std::clamp(static_cast<float>(step) / lr_delay_steps, 0.0f, 1.0f));
+        }
+        else
+        {
+            delay_rate = 1.0f;
+        }
+
+        float t = std::clamp(static_cast<float>(step) / max_steps, 0.0f, 1.0f);
+        float log_lerp = std::exp(std::log(lr_init) * (1 - t) + std::log(lr_final) * t);
+        return delay_rate * log_lerp;
+    };
+}
 #ifdef UNIT_TEST
 #include <boost/test/unit_test.hpp>
 namespace

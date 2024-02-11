@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 #include <memory>
-
+#include <functional>
 struct OptimizationParams;
 
 class GaussianModel
@@ -8,21 +8,35 @@ class GaussianModel
 public:
     struct CoreParams
     {
-        int active_sh_degree_;                          //
-        torch::Tensor xyz_;                             //
-        torch::Tensor features_dc_;                     //
-        torch::Tensor features_rest_;                   //
-        torch::Tensor scaling_;                         //
-        torch::Tensor rotation_;                        //
-        torch::Tensor opacity_;                         //
-        torch::Tensor max_radii2D_;                     //
-        torch::Tensor xyz_gradient_accum_;              //
-        torch::Tensor denom_;                           //
-        std::unique_ptr<torch::optim::Adam> optimizer_; //
-        float spatial_lr_scale_;                        //
+        int active_sh_degree_;
+        torch::Tensor xyz_;
+        torch::Tensor features_dc_;
+        torch::Tensor features_rest_;
+        torch::Tensor scaling_;
+        torch::Tensor rotation_;
+        torch::Tensor opacity_;
+        torch::Tensor max_radii2D_;
+        torch::Tensor xyz_gradient_accum_;
+        torch::Tensor denom_;
+        std::map<std::string, std::unique_ptr<torch::optim::Adam>> optimizers_;
+        float spatial_lr_scale_;
 
-        void capture(const std::string &path, const std::string &opt_path);
-        void restore(const std::string &tensors_path, const std::string &opt_path);
+        void capture(
+            const std::string &path,
+            const std::string &opt_path_for_xyz,
+            const std::string &opt_path_for_f_dc,
+            const std::string &opt_path_for_f_rest,
+            const std::string &opt_path_for_opacity,
+            const std::string &opt_path_for_scaling,
+            const std::string &opt_path_for_rotation);
+        void restore(
+            const std::string &path,
+            const std::string &opt_path_for_xyz,
+            const std::string &opt_path_for_f_dc,
+            const std::string &opt_path_for_f_rest,
+            const std::string &opt_path_for_opacity,
+            const std::string &opt_path_for_scaling,
+            const std::string &opt_path_for_rotation);
     };
 
 private:
@@ -46,12 +60,27 @@ private:
         const torch::Tensor &rotation);
     Activation_2 covariance_activation_;
 
+    std::function<float(int)> xyz_scheduler_args_;
+
 public:
     GaussianModel(int sh_degree);
 
-    void capture(const std::string &tensors_path, const std::string &opt_path);
-    void restore(const std::string &tensors_path, const std::string &opt_path);
-
+    void capture(
+        const std::string &tensors_path,
+        const std::string &opt_path_for_xyz,
+        const std::string &opt_path_for_f_dc,
+        const std::string &opt_path_for_f_rest,
+        const std::string &opt_path_for_opacity,
+        const std::string &opt_path_for_scaling,
+        const std::string &opt_path_for_rotation);
+    void restore(
+        const std::string &tensors_path,
+        const std::string &opt_path_for_xyz,
+        const std::string &opt_path_for_f_dc,
+        const std::string &opt_path_for_f_rest,
+        const std::string &opt_path_for_opacity,
+        const std::string &opt_path_for_scaling,
+        const std::string &opt_path_for_rotation);
     auto get_core_params() -> CoreParams &;
     auto get_core_params() const -> const CoreParams &;
 
@@ -66,5 +95,5 @@ public:
 
     auto setup(const OptimizationParams &params) -> void;
 
-    auto update_learning_rate(int iteration) const -> float;
+    auto update_learning_rate(int iteration) -> float;
 };

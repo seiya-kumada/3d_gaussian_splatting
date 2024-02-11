@@ -42,7 +42,7 @@ GaussianModel::GaussianModel(int sh_degree)
           torch::empty(0), // max_radii2D_
           torch::empty(0), // xyz_gradient_accum_
           torch::empty(0), // denom_
-          nullptr,         // optimizer_
+          {},              // optimizers_
           0,               // spatial_lr_scale_
       },
       scaling_activation_{&torch::exp},
@@ -50,14 +50,21 @@ GaussianModel::GaussianModel(int sh_degree)
       opacity_activation_{&torch::sigmoid},
       inverse_opacity_activation_{&torch::special::logit},
       rotation_activation_{&torch::nn::functional::normalize},
-      covariance_activation_{build_covariance_from_scaling_rotation}
+      covariance_activation_{build_covariance_from_scaling_rotation},
+      xyz_scheduler_args_{get_expon_lr_func(0.0, 0.0, 0, 1.0, 1000000)}
 {
 }
 
 // test passed
-void GaussianModel::CoreParams::capture(const std::string &tensors_path, const std::string &opt_path)
+void GaussianModel::CoreParams::capture(
+    const std::string &tensors_path,
+    const std::string &opt_path_for_xyz,
+    const std::string &opt_path_for_f_dc,
+    const std::string &opt_path_for_f_rest,
+    const std::string &opt_path_for_opacity,
+    const std::string &opt_path_for_scaling,
+    const std::string &opt_path_for_rotation)
 {
-
     std::vector<torch::Tensor> tensors = {
         torch::tensor(active_sh_degree_),
         xyz_,
@@ -72,14 +79,48 @@ void GaussianModel::CoreParams::capture(const std::string &tensors_path, const s
         torch::tensor(spatial_lr_scale_),
     };
     torch::save(tensors, tensors_path);
-    if (optimizer_ != nullptr)
+
+    for (auto &[name, optimizer] : optimizers_)
     {
-        torch::save(*optimizer_, opt_path);
+        if (optimizer != nullptr)
+        {
+            if (name == "xyz")
+            {
+                torch::save(*optimizer, opt_path_for_xyz);
+            }
+            else if (name == "f_dc")
+            {
+                torch::save(*optimizer, opt_path_for_f_dc);
+            }
+            else if (name == "f_rest")
+            {
+                torch::save(*optimizer, opt_path_for_f_rest);
+            }
+            else if (name == "opacity")
+            {
+                torch::save(*optimizer, opt_path_for_opacity);
+            }
+            else if (name == "scaling")
+            {
+                torch::save(*optimizer, opt_path_for_scaling);
+            }
+            else if (name == "rotation")
+            {
+                torch::save(*optimizer, opt_path_for_rotation);
+            }
+        }
     }
 }
 
 // test passed
-void GaussianModel::CoreParams::restore(const std::string &tensors_path, const std::string &opt_path)
+void GaussianModel::CoreParams::restore(
+    const std::string &tensors_path,
+    const std::string &opt_path_for_xyz,
+    const std::string &opt_path_for_f_dc,
+    const std::string &opt_path_for_f_rest,
+    const std::string &opt_path_for_opacity,
+    const std::string &opt_path_for_scaling,
+    const std::string &opt_path_for_rotation)
 {
     if (fs::exists(tensors_path))
     {
@@ -97,18 +138,29 @@ void GaussianModel::CoreParams::restore(const std::string &tensors_path, const s
         denom_ = tensors[9];
         spatial_lr_scale_ = tensors[10].item<float>();
     }
-    if (fs::exists(opt_path))
+    if (fs::exists(opt_path_for_xyz))
     {
-        // l = [
-        //{'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
-        //{'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
-        //{'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
-        //{'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
-        //{'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-        //{'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
-        //]
-        // self.optimizer = torch.optim.Adam(l, lr = 0.0, eps = 1e-15)
-        torch::load(*optimizer_, opt_path);
+        torch::load(*optimizers_["xyz"], opt_path_for_xyz);
+    }
+    if (fs::exists(opt_path_for_f_dc))
+    {
+        torch::load(*optimizers_["f_dc"], opt_path_for_f_dc);
+    }
+    if (fs::exists(opt_path_for_f_rest))
+    {
+        torch::load(*optimizers_["f_rest"], opt_path_for_f_rest);
+    }
+    if (fs::exists(opt_path_for_opacity))
+    {
+        torch::load(*optimizers_["opacity"], opt_path_for_opacity);
+    }
+    if (fs::exists(opt_path_for_scaling))
+    {
+        torch::load(*optimizers_["scaling"], opt_path_for_scaling);
+    }
+    if (fs::exists(opt_path_for_rotation))
+    {
+        torch::load(*optimizers_["rotation"], opt_path_for_rotation);
     }
 }
 
@@ -123,15 +175,43 @@ auto GaussianModel::get_core_params() const -> const GaussianModel::CoreParams &
 }
 
 // test passed
-void GaussianModel::capture(const std::string &tensors_path, const std::string &opt_path)
+void GaussianModel::capture(
+    const std::string &tensors_path,
+    const std::string &opt_path_for_xyz,
+    const std::string &opt_path_for_f_dc,
+    const std::string &opt_path_for_f_rest,
+    const std::string &opt_path_for_opacity,
+    const std::string &opt_path_for_scaling,
+    const std::string &opt_path_for_rotation)
 {
-    core_params_.capture(tensors_path, opt_path);
+    core_params_.capture(
+        tensors_path,
+        opt_path_for_xyz,
+        opt_path_for_f_dc,
+        opt_path_for_f_rest,
+        opt_path_for_opacity,
+        opt_path_for_scaling,
+        opt_path_for_rotation);
 }
 
 // test passed
-void GaussianModel::restore(const std::string &tensors_path, const std::string &opt_path)
+void GaussianModel::restore(
+    const std::string &tensors_path,
+    const std::string &opt_path_for_xyz,
+    const std::string &opt_path_for_f_dc,
+    const std::string &opt_path_for_f_rest,
+    const std::string &opt_path_for_opacity,
+    const std::string &opt_path_for_scaling,
+    const std::string &opt_path_for_rotation)
 {
-    core_params_.restore(tensors_path, opt_path);
+    core_params_.restore(
+        tensors_path,
+        opt_path_for_xyz,
+        opt_path_for_f_dc,
+        opt_path_for_f_rest,
+        opt_path_for_opacity,
+        opt_path_for_scaling,
+        opt_path_for_rotation);
 }
 
 // test passed
@@ -179,46 +259,50 @@ auto GaussianModel::oneup_SH_degree() -> void
         core_params_.active_sh_degree_++;
     }
 }
-
-auto GaussianModel::setup(const OptimizationParams &params) -> void
+auto GaussianModel::setup(const OptimizationParams &training_args) -> void
 {
-    // percent_dense_ = params.percent_dense_;
-    //      self.xyz_gradient_accum = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
-    //      self.denom = torch.zeros((self.get_xyz.shape[0], 1), device="cuda")
+    percent_dense_ = training_args.percent_dense_;
+    core_params_.xyz_gradient_accum_ = torch::zeros((get_xyz().size(0), 1), torch::device(torch::kCUDA));
+    core_params_.denom_ = torch::zeros({get_xyz().size(0), 1}, torch::device(torch::kCUDA));
 
-    //    l = [
-    //        {'params': [self._xyz], 'lr': training_args.position_lr_init * self.spatial_lr_scale, "name": "xyz"},
-    //        {'params': [self._features_dc], 'lr': training_args.feature_lr, "name": "f_dc"},
-    //        {'params': [self._features_rest], 'lr': training_args.feature_lr / 20.0, "name": "f_rest"},
-    //        {'params': [self._opacity], 'lr': training_args.opacity_lr, "name": "opacity"},
-    //        {'params': [self._scaling], 'lr': training_args.scaling_lr, "name": "scaling"},
-    //        {'params': [self._rotation], 'lr': training_args.rotation_lr, "name": "rotation"}
-    //    ]
+    // オプティマイザの定義、パラメータグループを追加
+    core_params_.optimizers_["xyz"] = std::make_unique<torch::optim::Adam>(
+        std::vector<torch::Tensor>{core_params_.xyz_},
+        torch::optim::AdamOptions{training_args.position_lr_init_ * core_params_.spatial_lr_scale_});
 
-    //    self.optimizer = torch.optim.Adam(l, lr=0.0, eps=1e-15)
-    //    self.xyz_scheduler_args = get_expon_lr_func(lr_init=training_args.position_lr_init*self.spatial_lr_scale,
-    //                                                lr_final=training_args.position_lr_final*self.spatial_lr_scale,
-    //                                                lr_delay_mult=training_args.position_lr_delay_mult,
-    //                                                max_steps=training_args.position_lr_max_steps)
+    core_params_.optimizers_["f_dc"] = std::make_unique<torch::optim::Adam>(
+        std::vector<torch::Tensor>{core_params_.features_dc_},
+        torch::optim::AdamOptions{training_args.feature_lr_});
+
+    core_params_.optimizers_["f_rest"] = std::make_unique<torch::optim::Adam>(
+        std::vector<torch::Tensor>{core_params_.features_rest_},
+        torch::optim::AdamOptions{training_args.feature_lr_ / 20.0});
+
+    core_params_.optimizers_["opacity"] = std::make_unique<torch::optim::Adam>(
+        std::vector<torch::Tensor>{core_params_.opacity_},
+        torch::optim::AdamOptions{training_args.opacity_lr_});
+
+    core_params_.optimizers_["scaling"] = std::make_unique<torch::optim::Adam>(
+        std::vector<torch::Tensor>{core_params_.scaling_},
+        torch::optim::AdamOptions{training_args.scaling_lr_});
+
+    core_params_.optimizers_["rotation"] = std::make_unique<torch::optim::Adam>(
+        std::vector<torch::Tensor>{core_params_.rotation_},
+        torch::optim::AdamOptions{training_args.rotation_lr_});
+
+    xyz_scheduler_args_ = get_expon_lr_func(
+        training_args.position_lr_init_ * core_params_.spatial_lr_scale_,
+        training_args.position_lr_final_ * core_params_.spatial_lr_scale_,
+        training_args.position_lr_delay_mult_,
+        training_args.position_lr_max_steps_);
 }
 
-auto GaussianModel::update_learning_rate(int iteration) const -> float
+auto GaussianModel::update_learning_rate(int iteration) -> float
 {
-    for (const auto &param_group : core_params_.optimizer_->param_groups())
-    {
-        // if (param_group["name"] == "xyz")
-        //{
-        //     auto lr = 0.0; // self.xyz_scheduler_args(iteration)
-        //     param_group["lr"] = lr;
-        //     return lr;
-        // }
-    }
-    // for param_group in self.optimizer.param_groups:
-    //         if param_group["name"] == "xyz":
-    //             lr = self.xyz_scheduler_args(iteration)
-    //             param_group['lr'] = lr
-    //             return lr
-    return 0.0;
+    auto param_group = core_params_.optimizers_["xyz"]->param_groups()[0];
+    auto lr = xyz_scheduler_args_(iteration);
+    static_cast<torch::optim::AdamOptions &>(param_group.options()).lr(lr);
+    return lr;
 }
 
 #ifdef UNIT_TEST
