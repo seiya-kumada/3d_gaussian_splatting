@@ -113,6 +113,11 @@ void GaussianModel::CoreParams::capture(
 }
 
 // test passed
+auto GaussianModel::get_max_sh_degree() const -> int
+{
+    return max_sh_degree_;
+}
+// test passed
 void GaussianModel::CoreParams::restore(
     const std::string &tensors_path,
     const std::string &opt_path_for_xyz,
@@ -138,6 +143,7 @@ void GaussianModel::CoreParams::restore(
         denom_ = tensors[9];
         spatial_lr_scale_ = tensors[10].item<float>();
     }
+
     if (fs::exists(opt_path_for_xyz))
     {
         torch::load(*optimizers_["xyz"], opt_path_for_xyz);
@@ -164,11 +170,13 @@ void GaussianModel::CoreParams::restore(
     }
 }
 
+// test passed
 auto GaussianModel::get_core_params() -> GaussianModel::CoreParams &
 {
     return core_params_;
 }
 
+// test passed
 auto GaussianModel::get_core_params() const -> const GaussianModel::CoreParams &
 {
     return core_params_;
@@ -196,6 +204,7 @@ void GaussianModel::capture(
 
 // test passed
 void GaussianModel::restore(
+    const OptimizationParams &params,
     const std::string &tensors_path,
     const std::string &opt_path_for_xyz,
     const std::string &opt_path_for_f_dc,
@@ -204,6 +213,7 @@ void GaussianModel::restore(
     const std::string &opt_path_for_scaling,
     const std::string &opt_path_for_rotation)
 {
+    setup(params);
     core_params_.restore(
         tensors_path,
         opt_path_for_xyz,
@@ -259,6 +269,8 @@ auto GaussianModel::oneup_SH_degree() -> void
         core_params_.active_sh_degree_++;
     }
 }
+
+//  test passed
 auto GaussianModel::setup(const OptimizationParams &training_args) -> void
 {
     percent_dense_ = training_args.percent_dense_;
@@ -303,6 +315,48 @@ auto GaussianModel::update_learning_rate(int iteration) -> float
     auto lr = xyz_scheduler_args_(iteration);
     static_cast<torch::optim::AdamOptions &>(param_group.options()).lr(lr);
     return lr;
+}
+
+// test passed
+GaussianModel::Activation_0 GaussianModel::get_scaling_activation() const
+{
+    return scaling_activation_;
+}
+
+// test passed
+GaussianModel::Activation_0 GaussianModel::get_scaling_inverse_activation() const
+{
+    return scaling_inverse_activation_;
+}
+
+// test passed
+GaussianModel::Activation_0 GaussianModel::get_opacity_activation() const
+{
+    return opacity_activation_;
+}
+
+// test passed
+GaussianModel::Activation_0 GaussianModel::get_inverse_opacity_activation() const
+{
+    return inverse_opacity_activation_;
+}
+
+// test passed
+GaussianModel::Activation_1 GaussianModel::get_rotation_activation() const
+{
+    return rotation_activation_;
+}
+
+// test passed
+GaussianModel::Activation_2 GaussianModel::get_covariance_activation() const
+{
+    return covariance_activation_;
+}
+
+// test passed
+auto GaussianModel::get_xyz_scheduler_args() const -> std::function<float(int)>
+{
+    return xyz_scheduler_args_;
 }
 
 #ifdef UNIT_TEST
@@ -359,8 +413,25 @@ namespace
     {
         std::cout << " test_capture_and_restore" << std::endl;
         GaussianModel model(2);
-        model.capture("test_gaussian_model.pt", "test_gaussian_model_opt.pt");
-        model.restore("test_gaussian_model.pt", "test_gaussian_model_opt.pt");
+        auto params = OptimizationParams{};
+
+        model.capture(
+            "test_gaussian_model.pt",
+            "test_gaussian_model_opt_for_xzy.pt",
+            "test_gaussian_model_opt_for_f_dc.pt",
+            "test_gaussian_model_opt_for_f_rest.pt",
+            "test_gaussian_model_opt_for_opacity.pt",
+            "test_gaussian_model_opt_for_scaling.pt",
+            "test_gaussian_model_opt_for_rotation.pt");
+        model.restore(
+            params,
+            "test_gaussian_model.pt",
+            "test_gaussian_model_opt_for_xzy.pt",
+            "test_gaussian_model_opt_for_f_dc.pt",
+            "test_gaussian_model_opt_for_f_rest.pt",
+            "test_gaussian_model_opt_for_opacity.pt",
+            "test_gaussian_model_opt_for_scaling.pt",
+            "test_gaussian_model_opt_for_rotation.pt");
         const auto &core_params = model.get_core_params();
         BOOST_CHECK_EQUAL(core_params.active_sh_degree_, 0);
         auto answer = torch::empty(0);
@@ -372,7 +443,10 @@ namespace
         BOOST_CHECK(torch::allclose(answer, core_params.max_radii2D_));
         BOOST_CHECK(torch::allclose(answer, core_params.xyz_gradient_accum_));
         BOOST_CHECK(torch::allclose(answer, core_params.denom_));
-        BOOST_CHECK(core_params.optimizer_ == nullptr);
+        for (auto &[name, optimizer] : core_params.optimizers_)
+        {
+            BOOST_CHECK(optimizer != nullptr);
+        }
         BOOST_CHECK_EQUAL(core_params.spatial_lr_scale_, 0);
     }
 
@@ -454,13 +528,126 @@ namespace
         BOOST_CHECK_EQUAL(core_params.active_sh_degree_, 1);
     }
 
+    void test_setup()
+    {
+        std::cout << " test_setup" << std::endl;
+        auto params = OptimizationParams{};
+        GaussianModel model(2);
+        model.setup(params);
+        auto &core_params = model.get_core_params();
+        for (auto &[name, optimizer] : core_params.optimizers_)
+        {
+            BOOST_CHECK(optimizer != nullptr);
+        }
+    }
+
+    void test_constructor()
+    {
+        std::cout << " test_constructor" << std::endl;
+        GaussianModel model(2);
+        BOOST_CHECK_EQUAL(model.get_max_sh_degree(), 2);
+        const auto &core_params = model.get_core_params();
+        BOOST_CHECK_EQUAL(core_params.active_sh_degree_, 0);
+        auto answer = torch::empty(0);
+        BOOST_CHECK(torch::allclose(answer, core_params.xyz_));
+        BOOST_CHECK(torch::allclose(answer, core_params.features_dc_));
+        BOOST_CHECK(torch::allclose(answer, core_params.features_rest_));
+        BOOST_CHECK(torch::allclose(answer, core_params.scaling_));
+        BOOST_CHECK(torch::allclose(answer, core_params.rotation_));
+        BOOST_CHECK(torch::allclose(answer, core_params.opacity_));
+        BOOST_CHECK(torch::allclose(answer, core_params.max_radii2D_));
+        BOOST_CHECK(torch::allclose(answer, core_params.xyz_gradient_accum_));
+        BOOST_CHECK(torch::allclose(answer, core_params.denom_));
+        BOOST_CHECK_EQUAL(core_params.optimizers_.size(), 0);
+        BOOST_CHECK_EQUAL(core_params.spatial_lr_scale_, 0);
+
+        auto &core_params_ = model.get_core_params();
+        core_params_.spatial_lr_scale_ = 1;
+        BOOST_CHECK_EQUAL(core_params_.spatial_lr_scale_, 1);
+
+        {
+            auto scaling_activation = model.get_scaling_activation();
+            auto v = torch::ones({1});
+            BOOST_CHECK_CLOSE(scaling_activation(v).item<float>(), 2.718281828459045, 1e-5);
+        }
+        {
+            auto scaling_inverse_activation = model.get_scaling_inverse_activation();
+            auto v = torch::ones({1});
+            BOOST_CHECK_CLOSE(scaling_inverse_activation(v).item<float>(), 0, 1e-5);
+        }
+
+        {
+            auto opacity_activation = model.get_opacity_activation();
+            auto u = torch::zeros({1});
+            BOOST_CHECK_CLOSE(opacity_activation(u).item<float>(), 0.5, 1e-5);
+        }
+        {
+            auto inverse_opacity_activation = model.get_inverse_opacity_activation();
+            auto s = 0.5 * torch::ones({1});
+            BOOST_CHECK_CLOSE(inverse_opacity_activation(s).item<float>(), 0, 1e-5);
+        }
+
+        {
+            auto rotation_activation = model.get_rotation_activation();
+            auto t = torch::ones({1, 4});
+            namespace F = torch::nn::functional;
+            BOOST_CHECK_CLOSE(rotation_activation(t, F::NormalizeFuncOptions().dim(1).p(2)).index({0, 0}).item<float>(), 0.5, 1e-5);
+        }
+        {
+            auto covariance_activation = model.get_covariance_activation();
+            auto device = torch::kCUDA;
+            torch::Tensor s = torch::zeros({2, 3}, torch::TensorOptions().dtype(torch::kFloat).device(device));
+            s.index_put_({0, 0}, 0.5);
+            s.index_put_({0, 1}, 0.5);
+            s.index_put_({0, 2}, 0.5);
+            s.index_put_({1, 0}, 0.25);
+            s.index_put_({1, 1}, 0.25);
+            s.index_put_({1, 2}, 0.25);
+            // scaling_modifier = 1
+            int scaling_modifier = 1;
+            // r = (0.5, 0.5, 0.5, 0.5)
+            torch::Tensor r = torch::zeros({2, 4}, torch::TensorOptions().dtype(torch::kFloat).device(device));
+            r.index_put_({0, 0}, 0.5);
+            r.index_put_({0, 1}, 0.5);
+            r.index_put_({0, 2}, 0.5);
+            r.index_put_({0, 3}, 0.5);
+            r.index_put_({1, 0}, 0.25);
+            r.index_put_({1, 1}, 0.25);
+            r.index_put_({1, 2}, 0.25);
+            r.index_put_({1, 3}, 0.25);
+            auto cov = covariance_activation(s, scaling_modifier, r);
+            // std::cout << cov.sizes() << std::endl;
+            BOOST_CHECK_EQUAL(cov.size(0), 2);
+            BOOST_CHECK_EQUAL(cov.size(1), 6);
+            BOOST_CHECK_EQUAL(cov.dtype(), torch::kFloat);
+            BOOST_CHECK_EQUAL(cov.device().type(), torch::kCUDA);
+
+            BOOST_CHECK_EQUAL(cov.index({0, 0}).item<float>(), 0.25);
+            BOOST_CHECK_EQUAL(cov.index({0, 1}).item<float>(), 0);
+            BOOST_CHECK_EQUAL(cov.index({0, 2}).item<float>(), 0);
+            BOOST_CHECK_EQUAL(cov.index({0, 3}).item<float>(), 0.25);
+            BOOST_CHECK_EQUAL(cov.index({0, 4}).item<float>(), 0);
+            BOOST_CHECK_EQUAL(cov.index({0, 5}).item<float>(), 0.25);
+
+            BOOST_CHECK_EQUAL(cov.index({1, 0}).item<float>(), 0.0625);
+            BOOST_CHECK_EQUAL(cov.index({1, 1}).item<float>(), 0);
+            BOOST_CHECK_EQUAL(cov.index({1, 2}).item<float>(), 0);
+            BOOST_CHECK_EQUAL(cov.index({1, 3}).item<float>(), 0.0625);
+            BOOST_CHECK_EQUAL(cov.index({1, 4}).item<float>(), 0);
+            BOOST_CHECK_EQUAL(cov.index({1, 5}).item<float>(), 0.0625);
+        }
+
+        {
+            auto xyz_scheduler_args = model.get_xyz_scheduler_args();
+            BOOST_CHECK_CLOSE(xyz_scheduler_args(0), 0, 1e-5);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_gaussian_model)
 {
     std::cout << "test_gaussian_model" << std::endl;
     test_build_covariance_from_scaling_rotation();
-    test_capture_and_restore();
     test_get_scaling();
     test_get_rotation();
     test_get_xyz();
@@ -468,5 +655,8 @@ BOOST_AUTO_TEST_CASE(test_gaussian_model)
     test_get_opacity();
     test_get_covariance();
     test_oneup_SH_degree();
+    test_setup();
+    test_capture_and_restore();
+    test_constructor();
 }
 #endif // UNIT_TEST

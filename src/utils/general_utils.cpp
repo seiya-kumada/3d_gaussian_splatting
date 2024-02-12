@@ -63,6 +63,7 @@ namespace
 
 }
 
+// test passed
 /**
  * @brief Strips the symmetric part of a tensor.
  *
@@ -97,6 +98,17 @@ auto build_scaling_rotation(const torch::Tensor &s, const torch::Tensor &r) -> t
     return L;
 }
 
+// test passed
+/**
+ * @brief Builds the function which returns the learning rate at a given step.
+ *
+ * @param lr_init The initial learning rate.
+ * @param lr_final The final learning rate.
+ * @param lr_delay_steps
+ * @param lr_delay_mult
+ * @param max_steps The number of steps during optimization.
+ * @return std::function<float(int)>
+ */
 auto get_expon_lr_func(
     float lr_init,
     float lr_final,
@@ -278,6 +290,47 @@ namespace
         BOOST_CHECK_EQUAL(uncertainty.index({1, 4}).item<float>(), 60);
         BOOST_CHECK_EQUAL(uncertainty.index({1, 5}).item<float>(), 90);
     }
+
+    void test_get_expon_lr_func()
+    {
+        std::cout << " get_expon_lr_func" << std::endl;
+        {
+            auto lr_init = 0.1f;
+            auto lr_final = 0.01f;
+            auto lr_delay_steps = 100;
+            auto lr_delay_mult = 0.5f;
+            auto max_steps = 1000;
+            auto lr_func = get_expon_lr_func(lr_init, lr_final, lr_delay_steps, lr_delay_mult, max_steps);
+            BOOST_CHECK_EQUAL(lr_func(-1), 0.0f);
+        }
+        {
+            auto lr_init = 0.0f;
+            auto lr_final = 0.0f;
+            auto lr_delay_steps = 100;
+            auto lr_delay_mult = 0.5f;
+            auto max_steps = 1000;
+            auto lr_func = get_expon_lr_func(lr_init, lr_final, lr_delay_steps, lr_delay_mult, max_steps);
+            BOOST_CHECK_EQUAL(lr_func(1), 0.0f);
+        }
+        {
+            auto lr_init = 0.1f;
+            auto lr_final = 0.01f;
+            auto lr_delay_steps = 100;
+            auto lr_delay_mult = 0.5f;
+            auto max_steps = 1000;
+            auto lr_func = get_expon_lr_func(lr_init, lr_final, lr_delay_steps, lr_delay_mult, max_steps);
+            BOOST_CHECK_CLOSE(lr_func(0), 0.05f, 1e-5);
+        }
+        {
+            auto lr_init = 0.1f;
+            auto lr_final = 0.01f;
+            auto lr_delay_steps = 0;
+            auto lr_delay_mult = 0.5f;
+            auto max_steps = 1000;
+            auto lr_func = get_expon_lr_func(lr_init, lr_final, lr_delay_steps, lr_delay_mult, max_steps);
+            BOOST_CHECK_CLOSE(lr_func(0), 0.1f, 1e-5);
+        }
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_general_utils)
@@ -286,5 +339,6 @@ BOOST_AUTO_TEST_CASE(test_general_utils)
     test_build_rotation();
     test_build_scaling_rotation();
     test_strip_lowerdiag();
+    test_get_expon_lr_func();
 }
 #endif // UNIT_TEST

@@ -45,19 +45,16 @@ private:
 
     CoreParams core_params_;
 
-    typedef at::Tensor (*Activation_0)(const at::Tensor &);
+    typedef std::function<torch::Tensor(const torch::Tensor &)> Activation_0;
     Activation_0 scaling_activation_;
     Activation_0 scaling_inverse_activation_;
     Activation_0 opacity_activation_;
     Activation_0 inverse_opacity_activation_;
 
-    typedef at::Tensor (*Activation_1)(const at::Tensor &, torch::nn::functional::NormalizeFuncOptions);
+    typedef std::function<at::Tensor(const torch::Tensor &, torch::nn::functional::NormalizeFuncOptions)> Activation_1;
     Activation_1 rotation_activation_;
 
-    typedef torch::Tensor (*Activation_2)(
-        const torch::Tensor &scaling,
-        const int &scaling_modifier,
-        const torch::Tensor &rotation);
+    typedef std::function<torch::Tensor(const torch::Tensor &, const int &, const torch::Tensor &)> Activation_2;
     Activation_2 covariance_activation_;
 
     std::function<float(int)> xyz_scheduler_args_;
@@ -74,6 +71,7 @@ public:
         const std::string &opt_path_for_scaling,
         const std::string &opt_path_for_rotation);
     void restore(
+        const OptimizationParams &params,
         const std::string &tensors_path,
         const std::string &opt_path_for_xyz,
         const std::string &opt_path_for_f_dc,
@@ -92,8 +90,16 @@ public:
     auto get_covariance(int scaling_modifier = 1) const -> torch::Tensor;
 
     auto oneup_SH_degree() -> void;
-
     auto setup(const OptimizationParams &params) -> void;
-
     auto update_learning_rate(int iteration) -> float;
+
+    auto get_max_sh_degree() const -> int;
+
+    Activation_0 get_scaling_activation() const;
+    Activation_0 get_scaling_inverse_activation() const;
+    Activation_0 get_opacity_activation() const;
+    Activation_0 get_inverse_opacity_activation() const;
+    Activation_1 get_rotation_activation() const;
+    Activation_2 get_covariance_activation() const;
+    std::function<float(int)> get_xyz_scheduler_args() const;
 };
