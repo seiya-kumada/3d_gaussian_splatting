@@ -28,6 +28,7 @@ namespace
     }
 }
 
+// test passed
 GaussianModel::GaussianModel(int sh_degree)
     : max_sh_degree_{sh_degree},
       percent_dense_{0},
@@ -90,6 +91,7 @@ void GaussianModel::CoreParams::capture(
             }
             else if (name == "f_dc")
             {
+                ;
                 torch::save(*optimizer, opt_path_for_f_dc);
             }
             else if (name == "f_rest")
@@ -309,9 +311,10 @@ auto GaussianModel::setup(const OptimizationParams &training_args) -> void
         training_args.position_lr_max_steps_);
 }
 
+// test passed
 auto GaussianModel::update_learning_rate(int iteration) -> float
 {
-    auto param_group = core_params_.optimizers_["xyz"]->param_groups()[0];
+    auto &param_group = core_params_.optimizers_["xyz"]->param_groups()[0];
     auto lr = xyz_scheduler_args_(iteration);
     static_cast<torch::optim::AdamOptions &>(param_group.options()).lr(lr);
     return lr;
@@ -642,6 +645,27 @@ namespace
             BOOST_CHECK_CLOSE(xyz_scheduler_args(0), 0, 1e-5);
         }
     }
+
+    void test_update_learning_rate()
+    {
+        std::cout << " test_update_learning_rate" << std::endl;
+        auto params = OptimizationParams{};
+
+        GaussianModel model(2);
+        auto &core_params = model.get_core_params();
+        core_params.spatial_lr_scale_ = 1;
+        model.setup(params);
+
+        const auto &param_group_before = model.get_core_params().optimizers_["xyz"]->param_groups()[0];
+        auto lr_before = static_cast<const torch::optim::AdamOptions &>(param_group_before.options()).lr();
+        BOOST_CHECK_CLOSE(lr_before, 0.000159999, 1e-3);
+
+        auto lr_after = model.update_learning_rate(-1);
+        BOOST_CHECK_CLOSE(lr_after, 0.0, 1e-3);
+
+        auto lr_after_ = static_cast<const torch::optim::AdamOptions &>(param_group_before.options()).lr();
+        BOOST_CHECK_CLOSE(lr_after_, 0.0, 1e-3);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_gaussian_model)
@@ -658,5 +682,6 @@ BOOST_AUTO_TEST_CASE(test_gaussian_model)
     test_setup();
     test_capture_and_restore();
     test_constructor();
+    test_update_learning_rate();
 }
 #endif // UNIT_TEST

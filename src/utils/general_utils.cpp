@@ -293,7 +293,7 @@ namespace
 
     void test_get_expon_lr_func()
     {
-        std::cout << " get_expon_lr_func" << std::endl;
+        std::cout << " test_get_expon_lr_func" << std::endl;
         {
             auto lr_init = 0.1f;
             auto lr_final = 0.01f;
