@@ -11,7 +11,7 @@ class Scene
 public:
     Scene(
         const ModelParams &model_params,
-        std::shared_ptr<GaussianModel> model,
+        std::shared_ptr<GaussianModel> gaussians,
         std::optional<int> load_iteration = std::nullopt,
         bool shuffle = true,
         const std::list<float> &resolution_scales = {1.0});
@@ -22,7 +22,7 @@ public:
 private:
     std::string model_path_;
     std::optional<int> loaded_iter_;
-    std::shared_ptr<GaussianModel> model_;
+    std::shared_ptr<GaussianModel> gaussians_;
 
     std::map<float, std::shared_ptr<Camera>> train_cameras_;
     std::map<float, std::shared_ptr<Camera>> test_cameras_;

@@ -1,6 +1,7 @@
 {
     "files.associations": {
-        "tuple": "cpp"
+        "tuple": "cpp",
+        "iosfwd": "cpp"
     },
     "C_Cpp.dimInactiveRegions": false,
 }

@@ -29,6 +29,11 @@ namespace
 }
 
 // test passed
+/**
+ * @brief Constructs a GaussianModel object with the specified spherical harmonic degree.
+ *
+ * @param sh_degree The spherical harmonic degree of the GaussianModel.
+ */
 GaussianModel::GaussianModel(int sh_degree)
     : max_sh_degree_{sh_degree},
       percent_dense_{0},
@@ -57,6 +62,17 @@ GaussianModel::GaussianModel(int sh_degree)
 }
 
 // test passed
+/**
+ * @brief Captures the core parameters of the Gaussian model.
+ *
+ * @param tensors_path The path to the tensors.
+ * @param opt_path_for_xyz The path for XYZ optimizer.
+ * @param opt_path_for_f_dc The path for F_DC optimizer.
+ * @param opt_path_for_f_rest The path for F_REST optimizer.
+ * @param opt_path_for_opacity The path for opacity optimizer.
+ * @param opt_path_for_scaling The path for scaling optimizer.
+ * @param opt_path_for_rotation The path for rotation optimizer.
+ */
 void GaussianModel::CoreParams::capture(
     const std::string &tensors_path,
     const std::string &opt_path_for_xyz,
@@ -120,6 +136,19 @@ auto GaussianModel::get_max_sh_degree() const -> int
     return max_sh_degree_;
 }
 // test passed
+/**
+ * @brief Restores the core parameters of the GaussianModel.
+ *
+ * This function restores the core parameters of the GaussianModel from the specified files.
+ *
+ * @param tensors_path The path to the tensors.
+ * @param opt_path_for_xyz The path for XYZ optimizer.
+ * @param opt_path_for_f_dc The path for F_DC optimizer.
+ * @param opt_path_for_f_rest The path for F_REST optimizer.
+ * @param opt_path_for_opacity The path for opacity optimizer.
+ * @param opt_path_for_scaling The path for scaling optimizer.
+ * @param opt_path_for_rotation The path for rotation optimizer.
+ */
 void GaussianModel::CoreParams::restore(
     const std::string &tensors_path,
     const std::string &opt_path_for_xyz,
@@ -185,6 +214,17 @@ auto GaussianModel::get_core_params() const -> const GaussianModel::CoreParams &
 }
 
 // test passed
+/**
+ * Captures the Gaussian model by saving the tensors and optimizer.
+ *
+ * @param tensors_path The path to save the tensors.
+ * @param opt_path_for_xyz The path to save the optimizer for XYZ.
+ * @param opt_path_for_f_dc The path to save the optimizer for F_DC.
+ * @param opt_path_for_f_rest The path to save the optimizer for F_REST.
+ * @param opt_path_for_opacity The path to save the optimizer for opacity.
+ * @param opt_path_for_scaling The path to save the optimizer for scaling.
+ * @param opt_path_for_rotation The path to save the optimizer for rotation.
+ */
 void GaussianModel::capture(
     const std::string &tensors_path,
     const std::string &opt_path_for_xyz,

@@ -103,9 +103,9 @@ void train(
 {
     auto first_iter = int{0};
     prepare_output_and_logger(model_params, printer);
-    auto gaussian_model = std::make_shared<GaussianModel>(model_params.sh_degree_);
-    auto scene = Scene{model_params, gaussian_model};
-    gaussian_model->setup(optimization_params);
+    auto gaussians = std::make_shared<GaussianModel>(model_params.sh_degree_);
+    auto scene = std::make_unique<Scene>(model_params, gaussians);
+    gaussians->setup(optimization_params);
 
     if (!other_params.start_checkpoint_.empty())
     {
@@ -120,14 +120,28 @@ void train(
     // iter_start = torch.cuda.Event(enable_timing = True)
     // iter_end = torch.cuda.Event(enable_timing = True)
 
-    auto viewpoint_stack = nullptr;
+    auto viewpoint_stack = std::shared_ptr<Camera>{nullptr};
     auto ema_loss_for_log = float{0.0};
 
     first_iter += 1;
     // loop between first_iter and optimization_params.iterations_
     for (auto iteration = first_iter; iteration <= optimization_params.iterations_; iteration++)
     {
-        gaussian_model->update_learning_rate(iteration);
+        gaussians->update_learning_rate(iteration);
+
+        // Every 1000 iterations, we increase the levels of SH up to a maximum degree
+        if (iteration % 1000 == 0)
+        {
+            gaussians->oneup_SH_degree();
+        }
+
+        // Pick a random Camera
+        if (!viewpoint_stack)
+        {
+            // copy!
+            // TODO: std::optional<Camera>の方が良いかも。
+            viewpoint_stack = std::make_shared<Camera>(*scene->get_train_camera());
+        }
     }
 }
 
