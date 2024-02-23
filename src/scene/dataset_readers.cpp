@@ -7,14 +7,14 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
 {
     auto cameras_extrinsic_file = std::string{};
     auto cameras_intrinsic_file = std::string{};
-    auto cam_extrinsics = std::map<uint64_t, Image>{};
-    auto cam_intrinsics = std::map<uint64_t, Image>{};
+    auto cam_extrinsics = std::unordered_map<int, Image>{};
+    auto cam_intrinsics = std::unordered_map<int, Camera>{};
     try
     {
         cameras_extrinsic_file = fs::path(path) / "sparse" / "0" / "images.bin";
         cameras_intrinsic_file = fs::path(path) / "sparse" / "0" / "cameras.bin";
         cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file);
-        //  cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file);
+        cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file);
     }
     catch (...)
     {

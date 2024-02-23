@@ -2,7 +2,7 @@
 #include <map>
 #include <vector>
 #include <array>
-
+#include <unordered_map>
 struct Image
 {
     int id_;
@@ -24,4 +24,16 @@ struct Image
         const std::vector<int64_t> &point3D_ids);
 };
 
-auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::map<uint64_t, Image>;
+struct Camera
+{
+    int id;
+    std::string model;
+    uint64_t width, height;
+    std::vector<double> params;
+
+    Camera(int id, std::string model, uint64_t width, uint64_t height, std::vector<double> params);
+    Camera();
+};
+
+auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, Image>;
+auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, Camera>;

@@ -24,6 +24,19 @@ Image::Image(
 {
 }
 
+Camera::Camera() {}
+Camera::Camera(
+    int id,
+    std::string model,
+    uint64_t width,
+    uint64_t height,
+    std::vector<double> params)
+    : id(id),
+      model(model),
+      width(width),
+      height(height),
+      params(params) {}
+
 namespace
 {
     template <typename T>
@@ -96,39 +109,22 @@ namespace
         stream.read(data.data(), num_bytes);
         return read_data(data.data(), format_char_sequence);
     }
-
-    template <typename T>
-    std::vector<T> sliceEveryThirdElement(const std::vector<T> &input, size_t start, size_t interval)
-    {
-        std::vector<T> result;
-        // 開始位置が入力ベクタのサイズ以上の場合、空のベクタを返す
-        if (start >= input.size())
-        {
-            return result;
-        }
-        for (size_t i = start; i < input.size(); i += interval)
-        {
-            result.push_back(input[i]);
-        }
-        return result;
-    }
-
 }
 
-auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::map<uint64_t, Image>
+// test passed
+auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, Image>
 {
-    std::ifstream fid(path_to_model_file, std::ios::binary);
-    if (!fid.is_open())
+    std::ifstream file(path_to_model_file, std::ios::binary);
+    if (!file.is_open())
     {
         throw std::runtime_error("Unable to open file: " + path_to_model_file);
     }
 
-    std::map<uint64_t, Image> images;
-    uint64_t num_reg_images = std::get<uint64_t>(read_next_bytes(fid, 8, "Q")[0]);
-    // std::cout << "_/_/_/num_reg_images:" << num_reg_images << std::endl;
+    std::unordered_map<int, Image> images;
+    uint64_t num_reg_images = std::get<uint64_t>(read_next_bytes(file, 8, "Q")[0]);
     for (uint64_t i = 0; i < num_reg_images; ++i)
     {
-        auto binary_image_properties = read_next_bytes(fid, 64, "idddddddi");
+        auto binary_image_properties = read_next_bytes(file, 64, "idddddddi");
         auto image_id = std::get<int>(binary_image_properties[0]);
         auto qvec = std::array<double, 4>{
             std::get<double>(binary_image_properties[1]),
@@ -141,24 +137,20 @@ auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::map<u
             std::get<double>(binary_image_properties[6]),
             std::get<double>(binary_image_properties[7])};
         auto camera_id = std::get<int>(binary_image_properties[8]);
-        auto current_char = std::get<char>(read_next_bytes(fid, 1, "c")[0]);
-        // std::cout << "_/_/_/image_id:" << image_id << std::endl;
-        // std::cout << "_/_/_/camera_id:" << camera_id << std::endl;
+        auto current_char = std::get<char>(read_next_bytes(file, 1, "c")[0]);
         auto image_name = std::string{};
         while (current_char != '\0')
         {
             image_name += current_char;
-            current_char = std::get<char>(read_next_bytes(fid, 1, "c")[0]);
+            current_char = std::get<char>(read_next_bytes(file, 1, "c")[0]);
         }
-        // std::cout << "_/_/_/image_name:" << image_name << std::endl;
-        uint64_t num_points2D = std::get<uint64_t>(read_next_bytes(fid, 8, "Q")[0]);
-        // std::cout << "_/_/_/num_points2D:" << num_points2D << std::endl;
+        uint64_t num_points2D = std::get<uint64_t>(read_next_bytes(file, 8, "Q")[0]);
 
         std::vector<std::pair<double, double>> xys;
         std::vector<int64_t> point3D_ids;
         for (uint64_t j = 0; j < num_points2D; ++j)
         {
-            auto x_y_id_s = read_next_bytes(fid, 24, "ddq");
+            auto x_y_id_s = read_next_bytes(file, 24, "ddq");
             double x = std::get<double>(x_y_id_s[0]);
             double y = std::get<double>(x_y_id_s[1]);
             int64_t point_id = std::get<int64_t>(x_y_id_s[2]);
@@ -170,6 +162,73 @@ auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::map<u
     return images;
 }
 
+namespace
+{
+    struct CameraModel
+    {
+        int model_id_;
+        std::string model_name_;
+        int num_params_;
+    };
+
+    const std::vector<CameraModel> CAMERA_MODELS{
+        {0, "SIMPLE_PINHOLE", 3},
+        {1, "PINHOLE", 4},
+        {2, "SIMPLE_RADIAL", 4},
+        {3, "RADIAL", 5},
+        {4, "OPENCV", 8},
+        {5, "OPENCV_FISHEYE", 8},
+        {6, "FULL_OPENCV", 12},
+        {7, "FOV", 5},
+        {8, "SIMPLE_RADIAL_FISHEYE", 4},
+        {9, "RADIAL_FISHEYE", 5},
+        {10, "THIN_PRISM_FISHEYE", 12},
+    };
+
+    auto make_camera_model_ids() -> std::unordered_map<int, CameraModel>
+    {
+        std::unordered_map<int, CameraModel> result;
+        for (const auto &model : CAMERA_MODELS)
+        {
+            result[model.model_id_] = model;
+        }
+        return result;
+    }
+    const std::unordered_map<int, CameraModel> CAMERA_MODEL_IDS = make_camera_model_ids();
+
+}
+
+auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, Camera>
+{
+    std::ifstream file(path_to_model_file, std::ios::binary);
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Unable to open file: " + path_to_model_file);
+    }
+
+    std::unordered_map<int, Camera> cameras;
+    uint64_t num_cameras = std::get<uint64_t>(read_next_bytes(file, 8, "Q")[0]);
+    std::cout << num_cameras << std::endl;
+    for (uint64_t i = 0; i < num_cameras; ++i)
+    {
+        auto camera_properties = read_next_bytes(file, 24, "iiQQ");
+        auto camera_id = std::get<int>(camera_properties[0]);
+        auto model_id = std::get<int>(camera_properties[1]);
+        auto width = std::get<uint64_t>(camera_properties[2]);
+        auto height = std::get<uint64_t>(camera_properties[3]);
+        const auto &model = CAMERA_MODEL_IDS.at(model_id);
+        std::vector<double> params(model.num_params_);
+        for (int p = 0; p < model.num_params_; ++p)
+        {
+            params[p] = std::get<double>(read_next_bytes(file, 8, "d")[0]);
+        }
+        cameras[camera_id] = Camera(camera_id, model.model_name_, width, height, params);
+    }
+
+    // assert(cameras.size() == num_cameras);
+    return cameras;
+}
+
 #ifdef UNIT_TEST
 #include <boost/test/unit_test.hpp>
 namespace
@@ -179,6 +238,27 @@ namespace
         std::cout << " test_read_extrinsics_binary" << std::endl;
         std::string path = "/home/ubuntu/data/gaussian_splatting/earth_brain/sparse/0/images.bin";
         auto cam_extrinsics = read_extrinsics_binary(path);
+        BOOST_CHECK_EQUAL(138, std::size(cam_extrinsics));
+        const auto &image = cam_extrinsics.at(1);
+        BOOST_CHECK_EQUAL(1, image.id_);
+        BOOST_CHECK_EQUAL(1, image.camera_id_);
+        BOOST_CHECK_EQUAL("Image_000001.jpg", image.name_);
+        BOOST_CHECK_EQUAL(792, image.xys_.size());
+        BOOST_CHECK_EQUAL(792, image.point3D_ids_.size());
+    }
+
+    void test_read_intrinsics_binary()
+    {
+        std::cout << " test_read_intrinsics_binary" << std::endl;
+        std::string path = "/home/ubuntu/data/gaussian_splatting/earth_brain/sparse/0/cameras.bin";
+        auto cam_intrinsics = read_intrinsics_binary(path);
+        // BOOST_CHECK_EQUAL(138, std::size(cam_extrinsics));
+        // const auto &image = cam_extrinsics.at(1);
+        // BOOST_CHECK_EQUAL(1, image.id_);
+        // BOOST_CHECK_EQUAL(1, image.camera_id_);
+        // BOOST_CHECK_EQUAL("Image_000001.jpg", image.name_);
+        // BOOST_CHECK_EQUAL(792, image.xys_.size());
+        // BOOST_CHECK_EQUAL(792, image.point3D_ids_.size());
     }
 }
 
@@ -186,5 +266,6 @@ BOOST_AUTO_TEST_CASE(test_colmap_loader)
 {
     std::cout << "test_colmap_loader" << std::endl;
     test_read_extrinsics_binary();
+    test_read_intrinsics_binary();
 }
 #endif // UNIT_TEST
