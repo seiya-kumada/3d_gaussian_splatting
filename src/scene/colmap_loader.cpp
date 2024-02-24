@@ -27,15 +27,15 @@ Image::Image(
 Camera::Camera() {}
 Camera::Camera(
     int id,
-    std::string model,
+    const std::string &model,
     uint64_t width,
     uint64_t height,
-    std::vector<double> params)
-    : id(id),
-      model(model),
-      width(width),
-      height(height),
-      params(params) {}
+    const std::vector<double> &params)
+    : id{id},
+      model{model},
+      width{width},
+      height{height},
+      params{params} {}
 
 namespace
 {
@@ -148,6 +148,8 @@ auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unord
 
         std::vector<std::pair<double, double>> xys;
         std::vector<int64_t> point3D_ids;
+        xys.reserve(num_points2D);
+        point3D_ids.reserve(num_points2D);
         for (uint64_t j = 0; j < num_points2D; ++j)
         {
             auto x_y_id_s = read_next_bytes(file, 24, "ddq");
@@ -155,7 +157,7 @@ auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unord
             double y = std::get<double>(x_y_id_s[1]);
             int64_t point_id = std::get<int64_t>(x_y_id_s[2]);
             xys.emplace_back(x, y);
-            point3D_ids.push_back(point_id);
+            point3D_ids.emplace_back(point_id);
         }
         images[image_id] = Image(image_id, qvec, tvec, camera_id, image_name, xys, point3D_ids);
     }
@@ -208,7 +210,7 @@ auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unord
 
     std::unordered_map<int, Camera> cameras;
     uint64_t num_cameras = std::get<uint64_t>(read_next_bytes(file, 8, "Q")[0]);
-    std::cout << num_cameras << std::endl;
+    auto camera = Camera(); 
     for (uint64_t i = 0; i < num_cameras; ++i)
     {
         auto camera_properties = read_next_bytes(file, 24, "iiQQ");
@@ -217,12 +219,14 @@ auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unord
         auto width = std::get<uint64_t>(camera_properties[2]);
         auto height = std::get<uint64_t>(camera_properties[3]);
         const auto &model = CAMERA_MODEL_IDS.at(model_id);
-        std::vector<double> params(model.num_params_);
+        std::vector<double> params;
+        params.reserve(model.num_params_);
         for (int p = 0; p < model.num_params_; ++p)
         {
-            params[p] = std::get<double>(read_next_bytes(file, 8, "d")[0]);
+            params.emplace_back(std::get<double>(read_next_bytes(file, 8, "d")[0]));
         }
-        cameras[camera_id] = Camera(camera_id, model.model_name_, width, height, params);
+        //auto camera = Camera();
+        //cameras.emplace(camera_id, Camera(camera_id, model.model_name_, width, height, params));
     }
 
     // assert(cameras.size() == num_cameras);
@@ -250,15 +254,16 @@ namespace
     void test_read_intrinsics_binary()
     {
         std::cout << " test_read_intrinsics_binary" << std::endl;
-        std::string path = "/home/ubuntu/data/gaussian_splatting/earth_brain/sparse/0/cameras.bin";
-        auto cam_intrinsics = read_intrinsics_binary(path);
-        // BOOST_CHECK_EQUAL(138, std::size(cam_extrinsics));
-        // const auto &image = cam_extrinsics.at(1);
-        // BOOST_CHECK_EQUAL(1, image.id_);
-        // BOOST_CHECK_EQUAL(1, image.camera_id_);
-        // BOOST_CHECK_EQUAL("Image_000001.jpg", image.name_);
-        // BOOST_CHECK_EQUAL(792, image.xys_.size());
-        // BOOST_CHECK_EQUAL(792, image.point3D_ids_.size());
+        auto c = Camera();
+        //std::string path = "/home/ubuntu/data/gaussian_splatting/earth_brain/sparse/0/cameras.bin";
+        //auto cam_intrinsics = read_intrinsics_binary(path);
+        //  BOOST_CHECK_EQUAL(138, std::size(cam_extrinsics));
+        //  const auto &image = cam_extrinsics.at(1);
+        //  BOOST_CHECK_EQUAL(1, image.id_);
+        //  BOOST_CHECK_EQUAL(1, image.camera_id_);
+        //  BOOST_CHECK_EQUAL("Image_000001.jpg", image.name_);
+        //  BOOST_CHECK_EQUAL(792, image.xys_.size());
+        //  BOOST_CHECK_EQUAL(792, image.point3D_ids_.size());
     }
 }
 

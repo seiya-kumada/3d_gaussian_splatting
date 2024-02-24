@@ -28,10 +28,16 @@ struct Camera
 {
     int id;
     std::string model;
-    uint64_t width, height;
+    uint64_t width;
+    uint64_t height;
     std::vector<double> params;
 
-    Camera(int id, std::string model, uint64_t width, uint64_t height, std::vector<double> params);
+    Camera(
+        int id,
+        const std::string &model,
+        uint64_t width,
+        uint64_t height,
+        const std::vector<double> &params);
     Camera();
 };
 
