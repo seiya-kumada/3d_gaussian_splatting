@@ -4,9 +4,10 @@
 #include <iostream>
 #include <variant>
 #include <cstring>
-Image::Image() {}
 
-Image::Image(
+colmap::Image::Image() {}
+
+colmap::Image::Image(
     int id,
     const std::array<double, 4> &qvec,
     const std::array<double, 3> &tvec,
@@ -24,18 +25,18 @@ Image::Image(
 {
 }
 
-Camera::Camera() {}
-Camera::Camera(
+colmap::Camera::Camera() {}
+colmap::Camera::Camera(
     int id,
     const std::string &model,
     uint64_t width,
     uint64_t height,
     const std::vector<double> &params)
-    : id{id},
-      model{model},
-      width{width},
-      height{height},
-      params{params} {}
+    : id_{id},
+      model_{model},
+      width_{width},
+      height_{height},
+      params_{params} {}
 
 namespace
 {
@@ -112,7 +113,7 @@ namespace
 }
 
 // test passed
-auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, Image>
+auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, colmap::Image>
 {
     std::ifstream file(path_to_model_file, std::ios::binary);
     if (!file.is_open())
@@ -120,7 +121,7 @@ auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unord
         throw std::runtime_error("Unable to open file: " + path_to_model_file);
     }
 
-    std::unordered_map<int, Image> images;
+    std::unordered_map<int, colmap::Image> images;
     uint64_t num_reg_images = std::get<uint64_t>(read_next_bytes(file, 8, "Q")[0]);
     for (uint64_t i = 0; i < num_reg_images; ++i)
     {
@@ -159,8 +160,21 @@ auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unord
             xys.emplace_back(x, y);
             point3D_ids.emplace_back(point_id);
         }
-        images[image_id] = Image(image_id, qvec, tvec, camera_id, image_name, xys, point3D_ids);
+        images[image_id] = colmap::Image(image_id, qvec, tvec, camera_id, image_name, xys, point3D_ids);
     }
+    return images;
+}
+
+// not implemented
+auto read_extrinsics_text(const std::string &path_to_model_file) -> std::unordered_map<int, colmap::Image>
+{
+    std::ifstream file(path_to_model_file, std::ios::binary);
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Unable to open file: " + path_to_model_file);
+    }
+
+    std::unordered_map<int, colmap::Image> images;
     return images;
 }
 
@@ -200,7 +214,8 @@ namespace
 
 }
 
-auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, Camera>
+// test passed
+auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unordered_map<int, colmap::Camera>
 {
     std::ifstream file(path_to_model_file, std::ios::binary);
     if (!file.is_open())
@@ -208,9 +223,9 @@ auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unord
         throw std::runtime_error("Unable to open file: " + path_to_model_file);
     }
 
-    std::unordered_map<int, Camera> cameras;
+    std::unordered_map<int, colmap::Camera> cameras;
     uint64_t num_cameras = std::get<uint64_t>(read_next_bytes(file, 8, "Q")[0]);
-    auto camera = Camera(); 
+
     for (uint64_t i = 0; i < num_cameras; ++i)
     {
         auto camera_properties = read_next_bytes(file, 24, "iiQQ");
@@ -219,18 +234,43 @@ auto read_intrinsics_binary(const std::string &path_to_model_file) -> std::unord
         auto width = std::get<uint64_t>(camera_properties[2]);
         auto height = std::get<uint64_t>(camera_properties[3]);
         const auto &model = CAMERA_MODEL_IDS.at(model_id);
-        std::vector<double> params;
-        params.reserve(model.num_params_);
+        std::vector<double> params(model.num_params_);
         for (int p = 0; p < model.num_params_; ++p)
         {
-            params.emplace_back(std::get<double>(read_next_bytes(file, 8, "d")[0]));
+            params[p] = std::get<double>(read_next_bytes(file, 8, "d")[0]);
         }
-        //auto camera = Camera();
-        //cameras.emplace(camera_id, Camera(camera_id, model.model_name_, width, height, params));
+        cameras[camera_id] = colmap::Camera(camera_id, model.model_name_, width, height, params);
+    }
+    return cameras;
+}
+
+// not implemented
+auto read_intrinsics_text(const std::string &path_to_model_file) -> std::unordered_map<int, colmap::Camera>
+{
+    std::ifstream file(path_to_model_file, std::ios::binary);
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Unable to open file: " + path_to_model_file);
     }
 
-    // assert(cameras.size() == num_cameras);
+    std::unordered_map<int, colmap::Camera> cameras;
     return cameras;
+}
+
+auto qvec2rotmat(const std::array<double, 4> &qvec) -> void
+{
+
+    //         [1 - 2 * qvec[2]**2 - 2 * qvec[3]**2,
+    //          2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
+    //          2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2]],
+
+    //         [2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
+    //          1 - 2 * qvec[1]**2 - 2 * qvec[3]**2,
+    //          2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1]],
+
+    //         [2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
+    //          2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
+    //          1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
 }
 
 #ifdef UNIT_TEST
@@ -254,16 +294,15 @@ namespace
     void test_read_intrinsics_binary()
     {
         std::cout << " test_read_intrinsics_binary" << std::endl;
-        auto c = Camera();
-        //std::string path = "/home/ubuntu/data/gaussian_splatting/earth_brain/sparse/0/cameras.bin";
-        //auto cam_intrinsics = read_intrinsics_binary(path);
-        //  BOOST_CHECK_EQUAL(138, std::size(cam_extrinsics));
-        //  const auto &image = cam_extrinsics.at(1);
-        //  BOOST_CHECK_EQUAL(1, image.id_);
-        //  BOOST_CHECK_EQUAL(1, image.camera_id_);
-        //  BOOST_CHECK_EQUAL("Image_000001.jpg", image.name_);
-        //  BOOST_CHECK_EQUAL(792, image.xys_.size());
-        //  BOOST_CHECK_EQUAL(792, image.point3D_ids_.size());
+        std::string path = "/home/ubuntu/data/gaussian_splatting/earth_brain/sparse/0/cameras.bin";
+        auto cam_intrinsics = read_intrinsics_binary(path);
+        BOOST_CHECK_EQUAL(1, std::size(cam_intrinsics));
+        const auto &camera = cam_intrinsics.at(1);
+
+        BOOST_CHECK_EQUAL("PINHOLE", camera.model_);
+        BOOST_CHECK_EQUAL(512, camera.width_);
+        BOOST_CHECK_EQUAL(384, camera.height_);
+        BOOST_CHECK_EQUAL(4, std::size(camera.params_));
     }
 }
 

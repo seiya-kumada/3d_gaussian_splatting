@@ -1,14 +1,49 @@
 #include "dataset_readers.h"
 #include <filesystem>
 #include "colmap_loader.h"
+#include <boost/range/adaptor/indexed.hpp>
+#include <iostream>
+#include <boost/format.hpp>
+
 namespace fs = std::filesystem;
 
+namespace
+{
+    auto read_colmap_cameras(
+        const std::unordered_map<int, colmap::Image> &cam_extrinsics,
+        const std::unordered_map<int, colmap::Camera> &cam_intrinsics,
+        const std::string &images_folder) -> std::vector<CameraInfo>
+    {
+        std::vector<CameraInfo> cam_infos;
+        auto camera = colmap::Camera{};
+        auto key = int{};
+        for (const auto &p : cam_extrinsics | boost::adaptors::indexed(0))
+        {
+            std::cout << std::endl;
+            std::cout << boost::format("Reading camera %1%/%2%") % (p.index() + 1) % std::size(cam_extrinsics);
+            std::cout << std::flush;
+
+            const auto &v = p.value();
+            const auto &camera_id = v.first;
+            const auto &extr = v.second;
+            const auto &intr = cam_intrinsics.at(extr.camera_id_);
+            const auto height = intr.height_;
+            const auto width = intr.width_;
+
+            const auto uid = intr.id_;
+            extr.qvec_;
+            extr.tvec_;
+        }
+
+        return cam_infos;
+    }
+}
 auto read_colmap_scene_info(const std::string &path, const std::string &images, bool eval, int llffhold) -> void
 {
     auto cameras_extrinsic_file = std::string{};
     auto cameras_intrinsic_file = std::string{};
-    auto cam_extrinsics = std::unordered_map<int, Image>{};
-    auto cam_intrinsics = std::unordered_map<int, Camera>{};
+    auto cam_extrinsics = std::unordered_map<int, colmap::Image>{};
+    auto cam_intrinsics = std::unordered_map<int, colmap::Camera>{};
     try
     {
         cameras_extrinsic_file = fs::path(path) / "sparse" / "0" / "images.bin";
@@ -20,54 +55,39 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
     {
         cameras_extrinsic_file = fs::path(path) / "sparse/0" / "images.txt";
         cameras_intrinsic_file = fs::path(path) / "sparse/0" / "cameras.txt";
-        // cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file);
-        //  cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file);
+        cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file);
+        cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file);
+        throw std::runtime_error("Not implemented");
     }
+    std::string reading_dir = !images.empty() ? images : "images";
+    // std::vector<CameraInfo> cam_infos_unsorted; // = readColmapCameras(...);
+    //// ソートなどの処理
+
+    // std::vector<CameraInfo> train_cam_infos, test_cam_infos;
+    //// train_cam_infos と test_cam_infos の分割処理
+
+    //// nerf_normalization = getNerfppNorm(train_cam_infos);
+
+    // fs::path ply_path = fs::path(path) / "sparse/0/points3D.ply";
+    // fs::path bin_path = fs::path(path) / "sparse/0/points3D.bin";
+    // fs::path txt_path = fs::path(path) / "sparse/0/points3D.txt";
+    // if (!fs::exists(ply_path)) {
+    //     std::cout << "Converting point3d.bin to .ply, will happen only the first time you open the scene." << std::endl;
+    //     try {
+    //         // xyz, rgb, _ = read_points3D_binary(bin_path);
+    //     } catch (...) {
+    //         // xyz, rgb, _ = read_points3D_text(txt_path);
+    //     }
+    //     // storePly(ply_path, xyz, rgb);
+    // }
+
+    // std::optional<YourPointCloudType> pcd;
+    // try {
+    //     // pcd = fetchPly(ply_path);
+    // } catch (...) {
+    //     pcd = std::nullopt;
+    // }
+
+    // SceneInfo scene_info{/* point_cloud= */pcd, /* train_cameras= */train_cam_infos, /* test_cameras= */test_cam_infos/*, その他の情報 */};
+    // return scene_info;
 }
-/*
-def readColmapSceneInfo(path, images, eval, llffhold=8):
-    try:
-        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.bin")
-        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.bin")
-        cam_extrinsics = read_extrinsics_binary(cameras_extrinsic_file)
-        cam_intrinsics = read_intrinsics_binary(cameras_intrinsic_file)
-    except:
-        cameras_extrinsic_file = os.path.join(path, "sparse/0", "images.txt")
-        cameras_intrinsic_file = os.path.join(path, "sparse/0", "cameras.txt")
-        cam_extrinsics = read_extrinsics_text(cameras_extrinsic_file)
-        cam_intrinsics = read_intrinsics_text(cameras_intrinsic_file)
-
-    reading_dir = "images" if images == None else images
-    cam_infos_unsorted = readColmapCameras(cam_extrinsics=cam_extrinsics, cam_intrinsics=cam_intrinsics, images_folder=os.path.join(path, reading_dir))
-    cam_infos = sorted(cam_infos_unsorted.copy(), key = lambda x : x.image_name)
-
-    if eval:
-        train_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold != 0]
-        test_cam_infos = [c for idx, c in enumerate(cam_infos) if idx % llffhold == 0]
-    else:
-        train_cam_infos = cam_infos
-        test_cam_infos = []
-
-    nerf_normalization = getNerfppNorm(train_cam_infos)
-
-    ply_path = os.path.join(path, "sparse/0/points3D.ply")
-    bin_path = os.path.join(path, "sparse/0/points3D.bin")
-    txt_path = os.path.join(path, "sparse/0/points3D.txt")
-    if not os.path.exists(ply_path):
-        print("Converting point3d.bin to .ply, will happen only the first time you open the scene.")
-        try:
-            xyz, rgb, _ = read_points3D_binary(bin_path)
-        except:
-            xyz, rgb, _ = read_points3D_text(txt_path)
-        storePly(ply_path, xyz, rgb)
-    try:
-        pcd = fetchPly(ply_path)
-    except:
-        pcd = None
-
-    scene_info = SceneInfo(point_cloud=pcd,
-                           train_cameras=train_cam_infos,
-                           test_cameras=test_cam_infos,
-                           nerf_normalization=nerf_normalization,
-                           ply_path=ply_path)
-    return scene_info*/

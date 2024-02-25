@@ -34,15 +34,15 @@ Scene::Scene(
     auto path = (fs::path(model_params.source_path_) / "sparce").string();
     if (fs::exists(path))
     {
-        }
+    }
 }
 
-auto Scene::get_train_camera(float scale) -> std::shared_ptr<Camera>
+auto Scene::get_train_camera(float scale) -> std::shared_ptr<CameraInfo>
 {
     return train_cameras_[scale];
 }
 
-auto Scene::get_test_camera(float scale) -> std::shared_ptr<Camera>
+auto Scene::get_test_camera(float scale) -> std::shared_ptr<CameraInfo>
 {
     return test_cameras_[scale];
 }
