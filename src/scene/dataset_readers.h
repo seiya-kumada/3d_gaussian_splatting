@@ -1,8 +1,29 @@
 #include <string>
+#include <opencv2/core.hpp>
 struct CameraInfo
 {
-    std::string image_name;
-    // その他のカメラ情報
+    int uid_;
+    cv::Matx33d R_;
+    cv::Vec3d T_;
+    double FovY_;
+    double FovX_;
+    cv::Mat image_;
+    std::string image_path_;
+    std::string image_name_;
+    int width_;
+    int height_;
+
+    CameraInfo(
+        int uid,
+        const cv::Matx33d &R,
+        const cv::Vec3d &T,
+        const double &FovY,
+        const double &FovX,
+        const cv::Mat &image,
+        const std::string &image_path,
+        const std::string &image_name,
+        const int &width,
+        const int &height);
 };
 auto read_colmap_scene_info(const std::string &path, const std::string &images, bool eval, int llffhold = 8) -> void;
 // auto read_colmap_camera(const std::string &path, const std::string &images, bool eval, int llffhold = 8) -> void;

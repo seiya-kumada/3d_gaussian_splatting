@@ -5,7 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "~/projects/libtorch/include",
-                "/home/ubuntu/projects/libtorch/include/torch/csrc/api/include"
+                "/home/ubuntu/projects/libtorch/include/torch/csrc/api/include",
+                "/usr/include/opencv4"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

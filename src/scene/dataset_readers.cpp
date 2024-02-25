@@ -4,8 +4,33 @@
 #include <boost/range/adaptor/indexed.hpp>
 #include <iostream>
 #include <boost/format.hpp>
-
+#include "utils/graphics_utils.h"
+#include <opencv2/opencv.hpp>
 namespace fs = std::filesystem;
+
+CameraInfo::CameraInfo(
+    int uid,
+    const cv::Matx33d &R,
+    const cv::Vec3d &T,
+    const double &FovY,
+    const double &FovX,
+    const cv::Mat &image,
+    const std::string &image_path,
+    const std::string &image_name,
+    const int &width,
+    const int &height)
+    : uid_{uid},
+      R_{R},
+      T_{T},
+      FovY_{FovY},
+      FovX_{FovX},
+      image_{image},
+      image_path_{image_path},
+      image_name_{image_name},
+      width_{width},
+      height_{height}
+{
+}
 
 namespace
 {
@@ -31,10 +56,38 @@ namespace
             const auto width = intr.width_;
 
             const auto uid = intr.id_;
-            extr.qvec_;
-            extr.tvec_;
-        }
+            const auto R = qvec2rotmat(extr.qvec_).t();
+            const auto T = extr.tvec_;
 
+            double FovY;
+            double FovX;
+
+            if (intr.model_ == "SIMPLE_PINHOLE")
+            {
+                const auto focal_length_x = intr.params_[0];
+                FovY = focal2fov(focal_length_x, height);
+                FovX = focal2fov(focal_length_x, width);
+            }
+            else if (intr.model_ == "PINHOLE")
+            {
+                const auto focal_length_x = intr.params_[0];
+                const auto focal_length_y = intr.params_[1];
+                FovY = focal2fov(focal_length_y, height);
+                FovX = focal2fov(focal_length_x, width);
+            }
+            else
+            {
+                throw std::runtime_error("Colmap camera model not handled: only undistorted datasets (PINHOLE or SIMPLE_PINHOLE cameras) supported!");
+            }
+            const auto image_path = fs::path(images_folder) / fs::path(extr.name_).filename();
+            const auto image_name = image_path.filename().stem();
+            const auto image = cv::imread(image_path.string());
+            // BGRからRGBへ変換
+            cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+
+            cam_infos.emplace_back(uid, R, T, FovY, FovX, image, image_path, image_name, width, height);
+        }
+        std::cout << std::endl;
         return cam_infos;
     }
 }
@@ -60,7 +113,7 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
         throw std::runtime_error("Not implemented");
     }
     std::string reading_dir = !images.empty() ? images : "images";
-    // std::vector<CameraInfo> cam_infos_unsorted; // = readColmapCameras(...);
+    std::vector<CameraInfo> cam_infos_unsorted = read_colmap_cameras(cam_extrinsics, cam_intrinsics, fs::path(path) / reading_dir);
     //// ソートなどの処理
 
     // std::vector<CameraInfo> train_cam_infos, test_cam_infos;

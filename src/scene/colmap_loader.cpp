@@ -9,8 +9,10 @@ colmap::Image::Image() {}
 
 colmap::Image::Image(
     int id,
-    const std::array<double, 4> &qvec,
-    const std::array<double, 3> &tvec,
+    // const std::array<double, 4> &qvec,
+    // const std::array<double, 3> &tvec,
+    const cv::Vec4d &qvec,
+    const cv::Vec3d &tvec,
     int camera_id,
     const std::string &name,
     const std::vector<std::pair<double, double>> &xys,
@@ -18,6 +20,8 @@ colmap::Image::Image(
     : id_{id},
       qvec_{qvec},
       tvec_{tvec},
+      // qvec_cv_{qvec_cv},
+      // tvec_cv_{tvec_cv},
       camera_id_{camera_id},
       name_{name},
       xys_{xys},
@@ -127,13 +131,13 @@ auto read_extrinsics_binary(const std::string &path_to_model_file) -> std::unord
     {
         auto binary_image_properties = read_next_bytes(file, 64, "idddddddi");
         auto image_id = std::get<int>(binary_image_properties[0]);
-        auto qvec = std::array<double, 4>{
+        auto qvec = cv::Vec4d{
             std::get<double>(binary_image_properties[1]),
             std::get<double>(binary_image_properties[2]),
             std::get<double>(binary_image_properties[3]),
             std::get<double>(binary_image_properties[4])};
 
-        auto tvec = std::array<double, 3>{
+        auto tvec = cv::Vec3d{
             std::get<double>(binary_image_properties[5]),
             std::get<double>(binary_image_properties[6]),
             std::get<double>(binary_image_properties[7])};
@@ -257,20 +261,21 @@ auto read_intrinsics_text(const std::string &path_to_model_file) -> std::unorder
     return cameras;
 }
 
-auto qvec2rotmat(const std::array<double, 4> &qvec) -> void
+// test passed
+auto qvec2rotmat(const cv::Vec4d &qvec) -> cv::Matx33d
 {
+    return cv::Matx33d{
+        1 - 2 * qvec(2) * qvec(2) - 2 * qvec(3) * qvec(3),
+        2 * qvec(1) * qvec(2) - 2 * qvec(0) * qvec(3),
+        2 * qvec(3) * qvec(1) + 2 * qvec(0) * qvec(2),
 
-    //         [1 - 2 * qvec[2]**2 - 2 * qvec[3]**2,
-    //          2 * qvec[1] * qvec[2] - 2 * qvec[0] * qvec[3],
-    //          2 * qvec[3] * qvec[1] + 2 * qvec[0] * qvec[2]],
+        2 * qvec(1) * qvec(2) + 2 * qvec(0) * qvec(3),
+        1 - 2 * qvec(1) * qvec(1) - 2 * qvec(3) * qvec(3),
+        2 * qvec(2) * qvec(3) - 2 * qvec(0) * qvec(1),
 
-    //         [2 * qvec[1] * qvec[2] + 2 * qvec[0] * qvec[3],
-    //          1 - 2 * qvec[1]**2 - 2 * qvec[3]**2,
-    //          2 * qvec[2] * qvec[3] - 2 * qvec[0] * qvec[1]],
-
-    //         [2 * qvec[3] * qvec[1] - 2 * qvec[0] * qvec[2],
-    //          2 * qvec[2] * qvec[3] + 2 * qvec[0] * qvec[1],
-    //          1 - 2 * qvec[1]**2 - 2 * qvec[2]**2]])
+        2 * qvec(3) * qvec(1) - 2 * qvec(0) * qvec(2),
+        2 * qvec(2) * qvec(3) + 2 * qvec(0) * qvec(1),
+        1 - 2 * qvec(1) * qvec(1) - 2 * qvec(2) * qvec(2)};
 }
 
 #ifdef UNIT_TEST
@@ -304,6 +309,22 @@ namespace
         BOOST_CHECK_EQUAL(384, camera.height_);
         BOOST_CHECK_EQUAL(4, std::size(camera.params_));
     }
+
+    void test_qvec2rotmat()
+    {
+        std::cout << " test_qvec2rotmat" << std::endl;
+        auto qvec = cv::Vec4d{1.0, 2.0, 3.0, 4.0};
+        auto r = qvec2rotmat(qvec);
+        BOOST_CHECK_EQUAL(-49, r(0, 0));
+        BOOST_CHECK_EQUAL(4, r(0, 1));
+        BOOST_CHECK_EQUAL(22, r(0, 2));
+        BOOST_CHECK_EQUAL(20, r(1, 0));
+        BOOST_CHECK_EQUAL(-39, r(1, 1));
+        BOOST_CHECK_EQUAL(20, r(1, 2));
+        BOOST_CHECK_EQUAL(10, r(2, 0));
+        BOOST_CHECK_EQUAL(28, r(2, 1));
+        BOOST_CHECK_EQUAL(-25, r(2, 2));
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_colmap_loader)
@@ -311,5 +332,6 @@ BOOST_AUTO_TEST_CASE(test_colmap_loader)
     std::cout << "test_colmap_loader" << std::endl;
     test_read_extrinsics_binary();
     test_read_intrinsics_binary();
+    test_qvec2rotmat();
 }
 #endif // UNIT_TEST

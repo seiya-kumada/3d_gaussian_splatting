@@ -8,7 +8,7 @@
 #include <boost/format.hpp>
 #include "utils/train_utils.h"
 #include <torch/csrc/autograd/anomaly_mode.h>
-
+// dataset_readerのユニットテストから 2024/02/25
 int main(int argc, const char *argv[])
 {
     // set up command line argument parser
