@@ -2,10 +2,14 @@
 #include <filesystem>
 #include "colmap_loader.h"
 #include <boost/range/adaptor/indexed.hpp>
+#include <boost/range/adaptor/filtered.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 #include <iostream>
 #include <boost/format.hpp>
 #include "utils/graphics_utils.h"
 #include <opencv2/opencv.hpp>
+#include <CppLinq/cpplinq.hpp>
+
 namespace fs = std::filesystem;
 
 CameraInfo::CameraInfo(
@@ -114,10 +118,33 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
     }
     std::string reading_dir = !images.empty() ? images : "images";
     std::vector<CameraInfo> cam_infos_unsorted = read_colmap_cameras(cam_extrinsics, cam_intrinsics, fs::path(path) / reading_dir);
-    //// ソートなどの処理
 
-    // std::vector<CameraInfo> train_cam_infos, test_cam_infos;
-    //// train_cam_infos と test_cam_infos の分割処理
+    // copy cam_info_unsorted to cam_infos and sort it
+    auto cam_infos = cam_infos_unsorted;
+    std::sort(cam_infos.begin(), cam_infos.end(), [](const CameraInfo &a, const CameraInfo &b)
+              { return a.image_name_ < b.image_name_; });
+
+    std::vector<CameraInfo> train_cam_infos {};
+    std::vector<CameraInfo> test_cam_infos {};
+    if (eval)
+    {
+        auto train_tmp = cam_infos 
+            | boost::adaptors::indexed(0) 
+            | boost::adaptors::filtered([llffhold](const auto &p) { return p.index() % llffhold != 0; }) 
+            | boost::adaptors::transformed([](const auto &p) { return p.value(); });
+        // convert to std::vector 
+        train_cam_infos = std::vector<CameraInfo>(boost::begin(train_tmp), boost::end(train_tmp));
+
+        auto test_tmp = cam_infos
+            | boost::adaptors::indexed(0)
+            | boost::adaptors::filtered([llffhold](const auto &p) { return p.index() % llffhold == 0; })
+            | boost::adaptors::transformed([](const auto &p) { return p.value(); });
+        test_cam_infos = std::vector<CameraInfo> (boost::begin(test_tmp), boost::end(test_tmp));
+    }else {
+        train_cam_infos = cam_infos;
+    }
+    
+    // next time, you start from here 
 
     //// nerf_normalization = getNerfppNorm(train_cam_infos);
 
@@ -143,4 +170,12 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
 
     // SceneInfo scene_info{/* point_cloud= */pcd, /* train_cameras= */train_cam_infos, /* test_cameras= */test_cam_infos/*, その他の情報 */};
     // return scene_info;
+}
+
+auto read_nerf_synthetic_info(
+    const std::string &path,
+    const std::string &images,
+    bool eval,
+    int llffhold) -> void
+{
 }

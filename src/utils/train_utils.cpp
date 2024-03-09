@@ -120,7 +120,7 @@ void train(
     // iter_start = torch.cuda.Event(enable_timing = True)
     // iter_end = torch.cuda.Event(enable_timing = True)
 
-    auto viewpoint_stack = std::shared_ptr<CameraInfo>{nullptr};
+    // auto viewpoint_stack = std::shared_ptr<CameraInfo>{nullptr};
     auto ema_loss_for_log = float{0.0};
 
     first_iter += 1;
@@ -136,12 +136,12 @@ void train(
         }
 
         // Pick a random Camera
-        if (!viewpoint_stack)
-        {
-            // copy!
-            // TODO: std::optional<Camera>の方が良いかも。
-            viewpoint_stack = std::make_shared<CameraInfo>(*scene->get_train_camera());
-        }
+        // if (!viewpoint_stack)
+        //{
+        // copy!
+        // TODO: std::optional<Camera>の方が良いかも。
+        // viewpoint_stack = std::make_shared<CameraInfo>(*scene->get_train_camera());
+        //}
     }
 }
 

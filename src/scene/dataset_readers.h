@@ -1,5 +1,7 @@
 #include <string>
 #include <opencv2/core.hpp>
+#include <unordered_map>
+
 struct CameraInfo
 {
     int uid_;
@@ -26,4 +28,11 @@ struct CameraInfo
         const int &height);
 };
 auto read_colmap_scene_info(const std::string &path, const std::string &images, bool eval, int llffhold = 8) -> void;
-// auto read_colmap_camera(const std::string &path, const std::string &images, bool eval, int llffhold = 8) -> void;
+auto read_nerf_synthetic_info(const std::string &path, const std::string &images, bool eval, int llffhold = 8) -> void;
+
+// std::unordered_map<
+//     std::string,
+//     std::function<void(const std::string &, const std::string &, bool, int)>>
+//     scene_load_type_callbacks{
+//         {"Colmap", read_colmap_scene_info},
+//         {"Blender", read_nerf_synthetic_info}};

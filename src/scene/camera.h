@@ -1,6 +1,6 @@
 #include <torch/torch.h>
 
-class CameraInfo : public torch::nn::Module
+class Camera : public torch::nn::Module
 {
 private:
     int uid_;

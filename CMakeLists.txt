@@ -32,7 +32,8 @@ endif()
 include_directories(
     "${PROJECT_SOURCE_DIR}"
     "${Boost_INCLUDE_DIRS}"
-    "${OpenCV_INCLUDE_DIRS}")
+    "${OpenCV_INCLUDE_DIRS}"
+    /usr/local/cpplinq)
 
 target_link_libraries(${PROJECT_NAME} ${TORCH_LIBRARIES} Boost::program_options Boost::date_time ${OpenCV_LIBS})
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
