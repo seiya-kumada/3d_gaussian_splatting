@@ -30,6 +30,8 @@ auto search_for_max_iteration(std::string &folder) -> int
     return maxIter;
 }
 
+
+
 #ifdef UNIT_TEST
 #include <boost/test/unit_test.hpp>
 namespace

@@ -8,7 +8,6 @@
 #include <boost/format.hpp>
 #include "utils/graphics_utils.h"
 #include <opencv2/opencv.hpp>
-#include <CppLinq/cpplinq.hpp>
 
 namespace fs = std::filesystem;
 
@@ -95,6 +94,21 @@ namespace
         return cam_infos;
     }
 }
+
+namespace {
+    auto get_nerfpp_norm(const std::vector<CameraInfo> &train_cam_infos) -> void {
+        auto cam_centers = std::vector<cv::Vec3d>{};
+        cam_centers.reserve(train_cam_infos.size());
+        for (const auto& cam : train_cam_infos) {
+            const auto W2C = get_world2view_2(cam.R_, cam.T_);
+            const auto C2W = W2C.inv();
+            cam_centers.emplace_back(C2W(0, 3), C2W(1, 3), C2W(2, 3));
+        }
+
+        // next time, you should start from here.
+    }
+}
+
 auto read_colmap_scene_info(const std::string &path, const std::string &images, bool eval, int llffhold) -> void
 {
     auto cameras_extrinsic_file = std::string{};
@@ -124,29 +138,33 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
     std::sort(cam_infos.begin(), cam_infos.end(), [](const CameraInfo &a, const CameraInfo &b)
               { return a.image_name_ < b.image_name_; });
 
-    std::vector<CameraInfo> train_cam_infos {};
-    std::vector<CameraInfo> test_cam_infos {};
+    std::vector<CameraInfo> train_cam_infos{};
+    std::vector<CameraInfo> test_cam_infos{};
     if (eval)
     {
-        auto train_tmp = cam_infos 
-            | boost::adaptors::indexed(0) 
-            | boost::adaptors::filtered([llffhold](const auto &p) { return p.index() % llffhold != 0; }) 
-            | boost::adaptors::transformed([](const auto &p) { return p.value(); });
-        // convert to std::vector 
+        auto train_tmp = cam_infos |
+            boost::adaptors::indexed(0) |
+            boost::adaptors::filtered([llffhold](const auto &p) { 
+                return p.index() % llffhold != 0; }) |
+            boost::adaptors::transformed([](const auto &p) { 
+                return p.value(); });
+        // convert to std::vector
         train_cam_infos = std::vector<CameraInfo>(boost::begin(train_tmp), boost::end(train_tmp));
 
-        auto test_tmp = cam_infos
-            | boost::adaptors::indexed(0)
-            | boost::adaptors::filtered([llffhold](const auto &p) { return p.index() % llffhold == 0; })
-            | boost::adaptors::transformed([](const auto &p) { return p.value(); });
-        test_cam_infos = std::vector<CameraInfo> (boost::begin(test_tmp), boost::end(test_tmp));
-    }else {
+        auto test_tmp = cam_infos | 
+            boost::adaptors::indexed(0) | 
+            boost::adaptors::filtered([llffhold](const auto &p) { 
+                return p.index() % llffhold == 0; }) |
+            boost::adaptors::transformed([](const auto &p) { 
+                return p.value(); });
+        test_cam_infos = std::vector<CameraInfo>(boost::begin(test_tmp), boost::end(test_tmp));
+    }
+    else
+    {
         train_cam_infos = cam_infos;
     }
-    
-    // next time, you start from here 
 
-    //// nerf_normalization = getNerfppNorm(train_cam_infos);
+    get_nerfpp_norm(train_cam_infos);
 
     // fs::path ply_path = fs::path(path) / "sparse/0/points3D.ply";
     // fs::path bin_path = fs::path(path) / "sparse/0/points3D.bin";
