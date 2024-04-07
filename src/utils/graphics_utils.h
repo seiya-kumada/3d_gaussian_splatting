@@ -1,5 +1,6 @@
 #include <inttypes.h>
 #include <opencv2/opencv.hpp>
+#include <torch/torch.h>
 
 auto focal2fov(const double &focal_length_x, const uint64_t &height) -> double;
 
@@ -17,3 +18,9 @@ auto get_world2view_2(
     const cv::Vec3d &t, 
     const cv::Vec3d &translate = cv::Vec3d{0.0, 0.0, 0.0},
     const double& scale = 1.0) -> cv::Matx44d;
+
+auto get_projection_matrix(
+    const double &znear,
+    const double &zfar,
+    const double &fovX,
+    const double &fovY) -> torch::Tensor;

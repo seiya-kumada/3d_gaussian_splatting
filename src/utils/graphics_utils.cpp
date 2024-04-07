@@ -42,8 +42,40 @@ auto get_world2view_2(const cv::Matx33d &R, const cv::Vec3d &t, const cv::Vec3d 
     return Rt;
 }
 
+// test passed
+auto get_projection_matrix(
+    const double &znear,
+    const double &zfar,
+    const double &fovX,
+    const double &fovY) -> torch::Tensor {
+    
+    auto tanHalfFovY = std::tan((fovY / 2));
+    auto tanHalfFovX = std::tan((fovX / 2));
+
+    auto top = tanHalfFovY * znear;
+    auto bottom = -top;
+    auto right = tanHalfFovX * znear;
+    auto left = -right;
+
+    auto P = torch::zeros({4, 4}, torch::kF64);
+
+    auto z_sign = 1.0;
+
+    P[0][0] = 2.0 * znear / (right - left);
+    P[1][1] = 2.0 * znear / (top - bottom);
+    P[0][2] = (right + left) / (right - left);
+    P[1][2] = (top + bottom) / (top - bottom);
+    P[3][2] = z_sign;
+    P[2][2] = z_sign * zfar / (zfar - znear);
+    P[2][3] = -(zfar * znear) / (zfar - znear);
+    return P;
+}
+
+
+
 #ifdef UNIT_TEST
 #include <boost/test/unit_test.hpp>
+
 
 namespace {
     void test_get_world2view()
@@ -84,6 +116,23 @@ namespace {
         BOOST_CHECK_EQUAL(Rt(2, 1), 2.0);
         BOOST_CHECK_EQUAL(Rt(3, 3), 1.0);
     }
+
+    void test_get_projection_matrix() {
+        std::cout << " test_get_projection_matrix" << std::endl;
+        const double pi = std::acos(-1);
+        auto znear = 1.0;
+        auto zfar = 10;
+        auto fovX = pi / 2;
+        auto fovY = pi / 2;
+        auto p = get_projection_matrix(znear, zfar, fovX, fovY);
+        BOOST_CHECK_CLOSE(p[0][0].item<double>(), 1.0, 0.0001);
+        BOOST_CHECK_CLOSE(p[1][1].item<double>(), 1.0, 0.0001);
+        BOOST_CHECK_EQUAL(p[0][2].item<double>(), 0.0);
+        BOOST_CHECK_EQUAL(p[1][2].item<double>(), 0.0);
+        BOOST_CHECK_EQUAL(p[3][2].item<double>(), 1.0);
+        BOOST_CHECK_CLOSE(p[2][2].item<double>(), 10.0/9, 0.0001);
+        BOOST_CHECK_CLOSE(p[2][3].item<double>(), -10.0/9, 0.0001);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(test_graphical_utils)
@@ -91,5 +140,6 @@ BOOST_AUTO_TEST_CASE(test_graphical_utils)
     std::cout << "test_graphical_utils" << std::endl;
     test_get_world2view();    
     test_get_world2view_2();    
+    test_get_projection_matrix();
 }
 #endif // UNIT_TEST
