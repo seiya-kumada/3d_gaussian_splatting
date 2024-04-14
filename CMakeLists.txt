@@ -19,7 +19,8 @@ add_executable(${PROJECT_NAME} src/train.cpp src/arguments/params.cpp src/utils/
     src/utils/system_utils.h src/utils/system_utils.cpp
     src/scene/dataset_readers.h src/scene/dataset_readers.cpp
     src/scene/colmap_loader.h src/scene/colmap_loader.cpp
-    src/utils/graphics_utils.h src/utils/graphics_utils.cpp)
+    src/utils/graphics_utils.h src/utils/graphics_utils.cpp
+    src/utils/camera_utils.h src/utils/camera_utils.cpp)
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 option(ENABLE_UNIT_TESTS "Enable unit testing" OFF)

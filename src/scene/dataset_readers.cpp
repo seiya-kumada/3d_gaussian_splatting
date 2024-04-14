@@ -96,7 +96,32 @@ namespace
 }
 
 namespace {
-    auto get_nerfpp_norm(const std::vector<CameraInfo> &train_cam_infos) -> void {
+
+    // test passed
+    auto get_center_and_diag(const std::vector<cv::Vec3d>& cam_centers) -> std::pair<cv::Vec3d, double> {
+        // calculate the sum of all camera centers
+        cv::Vec3d sum(0, 0, 0);
+        for (const auto& center : cam_centers) {
+            sum += center;
+        }
+        // calculate the average of all camera centers
+        cv::Vec3d avg_cam_center = sum / static_cast<double>(cam_centers.size());
+
+        // calculate the maximum distance between each camera center and the average camera center
+        double max_dist = 0.0;
+        for (const auto& center : cam_centers) {
+            double dist = cv::norm(center - avg_cam_center);
+            if (dist > max_dist) {
+                max_dist = dist;
+            }
+        }
+
+        return {avg_cam_center, max_dist};
+}
+
+    auto get_nerfpp_norm(const std::vector<CameraInfo> &train_cam_infos) 
+        -> std::unordered_map<std::string, cv::Vec3d> 
+    {
         auto cam_centers = std::vector<cv::Vec3d>{};
         cam_centers.reserve(train_cam_infos.size());
         for (const auto& cam : train_cam_infos) {
@@ -105,7 +130,10 @@ namespace {
             cam_centers.emplace_back(C2W(0, 3), C2W(1, 3), C2W(2, 3));
         }
 
-        // next time, you should start from here.
+        auto [center, diagonal] = get_center_and_diag(cam_centers);
+        auto radius = diagonal * 1.1;
+        auto translate = -center;
+        return {{"translate", translate}, {"radius", radius}};
     }
 }
 
@@ -162,6 +190,7 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
     else
     {
         train_cam_infos = cam_infos;
+        // test_cam_infos is empty.
     }
 
     get_nerfpp_norm(train_cam_infos);
@@ -190,6 +219,7 @@ auto read_colmap_scene_info(const std::string &path, const std::string &images, 
     // return scene_info;
 }
 
+// TODO
 auto read_nerf_synthetic_info(
     const std::string &path,
     const std::string &images,
@@ -197,3 +227,37 @@ auto read_nerf_synthetic_info(
     int llffhold) -> void
 {
 }
+
+#ifdef UNIT_TEST
+#include <boost/test/unit_test.hpp>
+namespace
+{
+    void test_get_center_and_diag()
+    {
+        std::cout << " test_get_center_and_diag" << std::endl;
+        std::vector<cv::Vec3d> cam_centers = {
+            cv::Vec3d{0, 0, 0},
+            cv::Vec3d{1, 1, 1},
+            cv::Vec3d{2, 2, 2},
+            cv::Vec3d{3, 3, 3},
+            cv::Vec3d{4, 4, 4},
+            cv::Vec3d{5, 5, 5},
+            cv::Vec3d{6, 6, 6},
+            cv::Vec3d{7, 7, 7},
+            cv::Vec3d{8, 8, 8},
+            cv::Vec3d{9, 9, 9},
+        };
+        auto [center, diag] = get_center_and_diag(cam_centers);
+        BOOST_CHECK_EQUAL(center[0], 4.5);
+        BOOST_CHECK_EQUAL(center[1], 4.5);
+        BOOST_CHECK_EQUAL(center[2], 4.5);
+        BOOST_CHECK_CLOSE(diag, std::sqrt(3.0 * 4.5 * 4.5), 0.0001);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(test_dataset_readers)
+{
+    std::cout << "test_dataset_readers" << std::endl;
+    test_get_center_and_diag();
+}
+#endif // UNIT_TEST
